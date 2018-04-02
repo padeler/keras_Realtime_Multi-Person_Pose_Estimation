@@ -26,7 +26,7 @@ max_iter = 200000 # 600000
 use_client_gen = True
 
 WEIGHTS_BEST = "hm_model_weights.best.h5"
-TRAINING_LOG = "training.csv"
+TRAINING_LOG = "training_hm_model.csv"
 LOGS_DIR = "./logs"
 
 def get_last_epoch():
@@ -72,12 +72,14 @@ else:
 train_client = DataGeneratorClient(port=5555, host="localhost", hwm=160, batch_size=batch_size, with_pafs=False)
 train_client.start()
 train_di = train_client.gen()
-train_samples = 52597
+# train_samples = 52597 # All train samples in the COCO dataset
+train_samples = 2000
 
 val_client = DataGeneratorClient(port=5556, host="localhost", hwm=160, batch_size=batch_size, with_pafs=False)
 val_client.start()
 val_di = val_client.gen()
-val_samples = 2645
+# val_samples = 2645 # All validation samples in the COCO dataset
+val_samples = 200
 
 # setup lr multipliers for conv layers
 lr_mult=dict()

@@ -16,3 +16,5 @@ logs/
 training.csv
 weights.best.h5
 **/*.pyc
+training/*.h5
+training/*.csv
