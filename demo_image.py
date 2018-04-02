@@ -10,31 +10,38 @@ from model import get_testing_model
 
 
 # find connection in the specified sequence, center 29 is in the position 15
-limbSeq = [[2, 3], [2, 6], [3, 4], [4, 5], [6, 7], [7, 8], [2, 9], [9, 10], \
-           [10, 11], [2, 12], [12, 13], [13, 14], [2, 1], [1, 15], [15, 17], \
+limbSeq = [[2, 3], [2, 6], [3, 4], [4, 5], [6, 7], [7, 8], [2, 9], [9, 10],
+           [10, 11], [2, 12], [12, 13], [13, 14], [2, 1], [1, 15], [15, 17],
            [1, 16], [16, 18], [3, 17], [6, 18]]
 
 # the middle joints heatmap correpondence
-mapIdx = [[31, 32], [39, 40], [33, 34], [35, 36], [41, 42], [43, 44], [19, 20], [21, 22], \
-          [23, 24], [25, 26], [27, 28], [29, 30], [47, 48], [49, 50], [53, 54], [51, 52], \
+mapIdx = [[31, 32], [39, 40], [33, 34], [35, 36], [41, 42], [43, 44], [19, 20], [21, 22],
+          [23, 24], [25, 26], [27, 28], [29, 30], [47, 48], [49, 50], [53, 54], [51, 52],
           [55, 56], [37, 38], [45, 46]]
 
 # visualize
 colors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0], [85, 255, 0],
-          [0, 255, 0], \
+          [0, 255, 0],
           [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255],
-          [85, 0, 255], \
+          [85, 0, 255],
           [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85]]
 
+def process(input_image, params, model_params, model):
+    hm, pafs, img = predict(input_image, params, model_params, model)
+    all_peaks, subset, candidate = skeletonize(hm, pafs, img.shape, params['thre1'], params['thre2'])
 
-def process (input_image, params, model_params, model):
+    viz = visualize(img.copy(), all_peaks, subset, candidate)
+    return viz
+
+
+def predict(input_image, params, model_params, model):
+
     if type(input_image) is str:
         oriImg = cv2.imread(input_image)  # B,G,R order
     else:
         oriImg = input_image
 
     canvas = oriImg.copy()  # B,G,R order
-
 
     multiplier = [x * model_params['boxsize'] / oriImg.shape[0] for x in params['scale_search']]
 
@@ -69,6 +76,11 @@ def process (input_image, params, model_params, model):
         heatmap_avg = heatmap_avg + heatmap / len(multiplier)
         paf_avg = paf_avg + paf / len(multiplier)
 
+    return heatmap_avg, paf_avg, oriImg
+
+
+def skeletonize(heatmap_avg, paf_avg, oriImgShape, thre1, thre2):
+
     all_peaks = []
     peak_counter = 0
 
@@ -86,7 +98,7 @@ def process (input_image, params, model_params, model):
         map_down[:, :-1] = map[:, 1:]
 
         peaks_binary = np.logical_and.reduce(
-            (map >= map_left, map >= map_right, map >= map_up, map >= map_down, map > params['thre1']))
+            (map >= map_left, map >= map_right, map >= map_up, map >= map_down, map > thre1))
         peaks = list(zip(np.nonzero(peaks_binary)[1], np.nonzero(peaks_binary)[0]))  # note reverse
         peaks_with_score = [x + (map_ori[x[1], x[0]],) for x in peaks]
         id = range(peak_counter, peak_counter + len(peaks))
@@ -129,8 +141,8 @@ def process (input_image, params, model_params, model):
 
                     score_midpts = np.multiply(vec_x, vec[0]) + np.multiply(vec_y, vec[1])
                     score_with_dist_prior = sum(score_midpts) / len(score_midpts) + min(
-                        0.5 * oriImg.shape[0] / norm - 1, 0)
-                    criterion1 = len(np.nonzero(score_midpts > params['thre2'])[0]) > 0.8 * len(
+                        0.5 * oriImgShape[0] / norm - 1, 0)
+                    criterion1 = len(np.nonzero(score_midpts > thre2)[0]) > 0.8 * len(
                         score_midpts)
                     criterion2 = score_with_dist_prior > 0
                     if criterion1 and criterion2:
@@ -205,6 +217,12 @@ def process (input_image, params, model_params, model):
         if subset[i][-1] < 4 or subset[i][-2] / subset[i][-1] < 0.4:
             deleteIdx.append(i)
     subset = np.delete(subset, deleteIdx, axis=0)
+
+    return all_peaks, subset, candidate
+
+
+def visualize(canvas, all_peaks, subset, candidate):
+
 
     for i in range(18):
         for j in range(len(all_peaks[i])):

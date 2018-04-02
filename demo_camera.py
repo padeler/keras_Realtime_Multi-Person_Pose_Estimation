@@ -7,12 +7,13 @@ import util
 from config_reader import config_reader
 from scipy.ndimage.filters import gaussian_filter
 from model import get_testing_model
-from demo_image import process
+from demo_image import predict, skeletonize, visualize
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', type=str, default='result.png', help='output image')
+    # parser.add_argument('--model', type=str, default='model/keras/model.h5', help='path to the weights file')
     parser.add_argument('--model', type=str, default='model/keras/weights_epoch29_loss455.h5', help='path to the weights file')
 
     args = parser.parse_args()
@@ -41,12 +42,15 @@ if __name__ == '__main__':
             raise Exception("VideoCapture.read() returned False")
 
         tic = time.time()
-
         # generate image with body parts
-        canvas = process(frame, params, model_params, model)
+        hm, pafs, img = predict(frame, params, model_params, model)
         toc = time.time()
+        all_peaks, subset, candidate = skeletonize(hm, pafs, img.shape, params['thre1'], params['thre2'])
 
-        cv2.imshow("RES", canvas)
+        viz = visualize(img.copy(), all_peaks, subset, candidate)
+
+
+        cv2.imshow("RES", viz)
         k = cv2.waitKey(30)
         print 'processing time is %.5f' % (toc - tic)
 
