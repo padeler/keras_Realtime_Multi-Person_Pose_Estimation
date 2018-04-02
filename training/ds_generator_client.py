@@ -11,7 +11,7 @@ else:
 
 class DataGeneratorClient(object):
 
-    def __init__(self, host, port, hwm=20, batch_size=10):
+    def __init__(self, host, port, hwm=20, batch_size=10, with_pafs=True):
         """
         :param host:
         :param port:
@@ -25,13 +25,14 @@ class DataGeneratorClient(object):
           Defaults to 10. Be sure to set the corresponding HWM on the
           receiving end as well.
         :param batch_size:
-        :param shuffle:
-        :param seed:
+        :param with_pafs: create data for original openpose model (includes pafs in x,y)
         """
         self.host = host
         self.port = port
         self.hwm = hwm
         self.socket = None
+
+        self.with_pafs = with_pafs
 
         self.split_point = 38
         self.vec_num = 38
@@ -114,13 +115,22 @@ class DataGeneratorClient(object):
                 batch_y1 = np.concatenate(batches_y1)
                 batch_y2 = np.concatenate(batches_y2)
 
-                yield [batch_x, batch_x1,  batch_x2], \
-                       [batch_y1, batch_y2,
-                        batch_y1, batch_y2,
-                        batch_y1, batch_y2,
-                        batch_y1, batch_y2,
-                        batch_y1, batch_y2,
-                        batch_y1, batch_y2]
+                if self.with_pafs:
+                    yield [batch_x, batch_x1,  batch_x2], \
+                           [batch_y1, batch_y2,
+                            batch_y1, batch_y2,
+                            batch_y1, batch_y2,
+                            batch_y1, batch_y2,
+                            batch_y1, batch_y2,
+                            batch_y1, batch_y2]
+                else:
+                    yield [batch_x, batch_x2], \
+                          [batch_y2,
+                           batch_y2,
+                           batch_y2,
+                           batch_y2,
+                           batch_y2,
+                           batch_y2]
 
     def start(self):
         context = zmq.Context()
