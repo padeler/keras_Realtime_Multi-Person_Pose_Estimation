@@ -27,9 +27,15 @@ colors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0]
           [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85]]
 
 
-def process (input_image, params, model_params):
+def process (input_image, params, model_params, model):
+    if type(input_image) is str:
+        oriImg = cv2.imread(input_image)  # B,G,R order
+    else:
+        oriImg = input_image
 
-    oriImg = cv2.imread(input_image)  # B,G,R order
+    canvas = oriImg.copy()  # B,G,R order
+
+
     multiplier = [x * model_params['boxsize'] / oriImg.shape[0] for x in params['scale_search']]
 
     heatmap_avg = np.zeros((oriImg.shape[0], oriImg.shape[1], 19))
@@ -200,7 +206,6 @@ def process (input_image, params, model_params):
             deleteIdx.append(i)
     subset = np.delete(subset, deleteIdx, axis=0)
 
-    canvas = cv2.imread(input_image)  # B,G,R order
     for i in range(18):
         for j in range(len(all_peaks[i])):
             cv2.circle(canvas, all_peaks[i][j][0:2], 4, colors[i], thickness=-1)
@@ -230,7 +235,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--image', type=str, required=True, help='input image')
     parser.add_argument('--output', type=str, default='result.png', help='output image')
-    parser.add_argument('--model', type=str, default='model/keras/model.h5', help='path to the weights file')
+    parser.add_argument('--model', type=str, default='model/keras/weights_epoch29_loss455.h5', help='path to the weights file')
 
     args = parser.parse_args()
     input_image = args.image
@@ -251,7 +256,7 @@ if __name__ == '__main__':
     params, model_params = config_reader()
 
     # generate image with body parts
-    canvas = process(input_image, params, model_params)
+    canvas = process(input_image, params, model_params, model)
 
     toc = time.time()
     print ('processing time is %.5f' % (toc - tic))
