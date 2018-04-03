@@ -41,8 +41,6 @@ def predict(input_image, params, model_params, model):
     else:
         oriImg = input_image
 
-    canvas = oriImg.copy()  # B,G,R order
-
     multiplier = [x * model_params['boxsize'] / oriImg.shape[0] for x in params['scale_search']]
 
     heatmap_avg = np.zeros((oriImg.shape[0], oriImg.shape[1], 19))
