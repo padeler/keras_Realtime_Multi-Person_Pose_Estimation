@@ -10,10 +10,11 @@ from ds_generator_client import DataGeneratorClient
 from optimizers import MultiSGD
 from keras.callbacks import LearningRateScheduler, ModelCheckpoint, CSVLogger, TensorBoard
 from keras.layers.convolutional import Conv2D
-from keras.applications.vgg19 import VGG19
+from keras.applications.resnet50 import ResNet50
+
 import keras.backend as K
 
-batch_size = 20
+batch_size = 10
 base_lr = 4e-5 # 2e-5
 momentum = 0.9
 weight_decay = 5e-4
@@ -21,6 +22,7 @@ lr_policy =  "step"
 gamma = 0.333
 stepsize = 136106 #68053   // after each stepsize iterations update learning rate: lr=lr*gamma
 max_iter = 200000 # 600000
+stages = 3
 
 # True = start data generator client, False = use augmented dataset file (deprecated)
 use_client_gen = True
@@ -36,18 +38,6 @@ def get_last_epoch():
 
 model = get_training_model(weight_decay)
 
-from_vgg = dict()
-from_vgg['conv1_1'] = 'block1_conv1'
-from_vgg['conv1_2'] = 'block1_conv2'
-from_vgg['conv2_1'] = 'block2_conv1'
-from_vgg['conv2_2'] = 'block2_conv2'
-from_vgg['conv3_1'] = 'block3_conv1'
-from_vgg['conv3_2'] = 'block3_conv2'
-from_vgg['conv3_3'] = 'block3_conv3'
-from_vgg['conv3_4'] = 'block3_conv4'
-from_vgg['conv4_1'] = 'block4_conv1'
-from_vgg['conv4_2'] = 'block4_conv2'
-
 # load previous weights or vgg19 if this is the first run
 if os.path.exists(WEIGHTS_BEST):
     print("Loading the best weights...")
@@ -55,27 +45,31 @@ if os.path.exists(WEIGHTS_BEST):
     model.load_weights(WEIGHTS_BEST)
     last_epoch = get_last_epoch() + 1
 else:
-    print("Loading vgg19 weights...")
-
-    vgg_model = VGG19(include_top=False, weights='imagenet')
-
-    for layer in model.layers:
-        if layer.name in from_vgg:
-            vgg_layer_name = from_vgg[layer.name]
-            layer.set_weights(vgg_model.get_layer(vgg_layer_name).get_weights())
-            print("Loaded VGG19 layer: " + vgg_layer_name)
-
+    print("Loading resnet50 weights...")
     last_epoch = 0
 
+    rn = ResNet50(include_top=False, weights='imagenet', pooling=None)
+    lc = 0
+    for layer in model.layers:
+        try:
+            rn_layer = rn.get_layer(layer.name)
+            if type(rn_layer) is Conv2D:
+                print "Loading weights for layer", layer.name
+                layer.set_weights(rn_layer.get_weights())
+                lc += 1
+        except:
+            print "Skipping Layer ", layer.name
+
+    print "Done loading weights for %d resnet conv layers" % lc
 # prepare generators
 
-train_client = DataGeneratorClient(port=5555, host="localhost", hwm=160, batch_size=batch_size, with_pafs=False)
+train_client = DataGeneratorClient(port=5555, host="localhost", hwm=160, batch_size=batch_size, with_pafs=False, stages=stages)
 train_client.start()
 train_di = train_client.gen()
 # train_samples = 52597 # All train samples in the COCO dataset
 train_samples = 2000
 
-val_client = DataGeneratorClient(port=5556, host="localhost", hwm=160, batch_size=batch_size, with_pafs=False)
+val_client = DataGeneratorClient(port=5556, host="localhost", hwm=160, batch_size=batch_size, with_pafs=False, stages=stages)
 val_client.start()
 val_di = val_client.gen()
 # val_samples = 2645 # All validation samples in the COCO dataset
@@ -86,7 +80,6 @@ lr_mult=dict()
 for layer in model.layers:
 
     if isinstance(layer, Conv2D):
-
         # stage = 1
         if re.match("Mconv\d_stage1.*", layer.name):
             kernel_name = layer.weights[0].name
@@ -101,7 +94,7 @@ for layer in model.layers:
             lr_mult[kernel_name] = 4
             lr_mult[bias_name] = 8
 
-        # vgg
+        # Resnet conv layers
         else:
            kernel_name = layer.weights[0].name
            bias_name = layer.weights[1].name
@@ -115,12 +108,8 @@ def eucl_loss(x, y):
     return K.sum(K.square(x - y)) / batch_size / 2
 
 losses = {}
-losses["weight_stage1_L2"] = eucl_loss
-losses["weight_stage2_L2"] = eucl_loss
-losses["weight_stage3_L2"] = eucl_loss
-losses["weight_stage4_L2"] = eucl_loss
-losses["weight_stage5_L2"] = eucl_loss
-losses["weight_stage6_L2"] = eucl_loss
+for i in range(1, stages+1):
+    losses["weight_stage%d_L2" % i] = eucl_loss
 
 # learning rate schedule - equivalent of caffe lr_policy =  "step"
 iterations_per_epoch = train_samples // batch_size
@@ -133,6 +122,7 @@ def step_decay(epoch):
 
 # configure callbacks
 lrate = LearningRateScheduler(step_decay)
+
 checkpoint = ModelCheckpoint(WEIGHTS_BEST, monitor='loss', verbose=0, save_best_only=False, save_weights_only=True, mode='min', period=1)
 csv_logger = CSVLogger(TRAINING_LOG, append=True)
 tb = TensorBoard(log_dir=LOGS_DIR, histogram_freq=0, write_graph=True, write_images=False)

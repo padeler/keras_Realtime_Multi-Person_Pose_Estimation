@@ -11,7 +11,7 @@ else:
 
 class DataGeneratorClient(object):
 
-    def __init__(self, host, port, hwm=20, batch_size=10, with_pafs=True):
+    def __init__(self, host, port, hwm=20, batch_size=10, with_pafs=True, stages=6):
         """
         :param host:
         :param port:
@@ -37,6 +37,7 @@ class DataGeneratorClient(object):
         self.split_point = 38
         self.vec_num = 38
         self.heat_num = 19
+        self.stages = stages
 
         self.batch_size = batch_size
 
@@ -117,20 +118,10 @@ class DataGeneratorClient(object):
 
                 if self.with_pafs:
                     yield [batch_x, batch_x1,  batch_x2], \
-                           [batch_y1, batch_y2,
-                            batch_y1, batch_y2,
-                            batch_y1, batch_y2,
-                            batch_y1, batch_y2,
-                            batch_y1, batch_y2,
-                            batch_y1, batch_y2]
+                           [batch_y1, batch_y2] * self.stages
                 else:
                     yield [batch_x, batch_x2], \
-                          [batch_y2,
-                           batch_y2,
-                           batch_y2,
-                           batch_y2,
-                           batch_y2,
-                           batch_y2]
+                          [batch_y2, ] * self.stages
 
     def start(self):
         context = zmq.Context()
