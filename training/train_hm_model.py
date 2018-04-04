@@ -13,7 +13,7 @@ from keras.layers.convolutional import Conv2D
 from keras.applications.vgg19 import VGG19
 import keras.backend as K
 
-batch_size = 20
+batch_size = 16
 base_lr = 4e-5 # 2e-5
 momentum = 0.9
 weight_decay = 5e-4
@@ -25,8 +25,8 @@ max_iter = 200000 # 600000
 # True = start data generator client, False = use augmented dataset file (deprecated)
 use_client_gen = True
 
-WEIGHTS_BEST = "hm_model_weights.best.h5"
-TRAINING_LOG = "training_hm_model.csv"
+WEIGHTS_BEST = "hm_bn_model_weights.h5"
+TRAINING_LOG = "training_hm_bn_model.csv"
 LOGS_DIR = "./logs"
 
 def get_last_epoch():

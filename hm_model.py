@@ -1,13 +1,59 @@
 from keras.models import Model
 from keras.layers.merge import Concatenate
-from keras.layers import Activation, Input, Lambda
+from keras.layers import Activation, Input, Lambda, BatchNormalization
 from keras.layers.convolutional import Conv2D
 from keras.layers.pooling import MaxPooling2D
 from keras.layers.merge import Multiply
 from keras.regularizers import l2
 from keras.initializers import random_normal,constant
 
-from model import vgg_block, stage1_block, stageT_block, apply_mask
+from model import vgg_block, conv, relu, apply_mask
+
+def stage1_block(x, num_p, branch, weight_decay):
+    # Block 1
+    x = conv(x, 128, 3, "Mconv1_stage1_L%d" % branch, (weight_decay, 0))
+    x = BatchNormalization()(x)
+    x = relu(x)
+    x = conv(x, 128, 3, "Mconv2_stage1_L%d" % branch, (weight_decay, 0))
+    x = BatchNormalization()(x)
+    x = relu(x)
+    x = conv(x, 128, 3, "Mconv3_stage1_L%d" % branch, (weight_decay, 0))
+    x = BatchNormalization()(x)
+    x = relu(x)
+    x = conv(x, 512, 1, "Mconv4_stage1_L%d" % branch, (weight_decay, 0))
+    x = BatchNormalization()(x)
+    x = relu(x)
+    x = conv(x, num_p, 1, "Mconv5_stage1_L%d" % branch, (weight_decay, 0))
+    x = BatchNormalization()(x)
+
+    return x
+
+
+def stageT_block(x, num_p, stage, branch, weight_decay):
+    # Block 1
+    x = conv(x, 128, 7, "Mconv1_stage%d_L%d" % (stage, branch), (weight_decay, 0))
+    x = BatchNormalization()(x)
+    x = relu(x)
+    x = conv(x, 128, 7, "Mconv2_stage%d_L%d" % (stage, branch), (weight_decay, 0))
+    x = BatchNormalization()(x)
+    x = relu(x)
+    x = conv(x, 128, 7, "Mconv3_stage%d_L%d" % (stage, branch), (weight_decay, 0))
+    x = BatchNormalization()(x)
+    x = relu(x)
+    x = conv(x, 128, 7, "Mconv4_stage%d_L%d" % (stage, branch), (weight_decay, 0))
+    x = BatchNormalization()(x)
+    x = relu(x)
+    x = conv(x, 128, 7, "Mconv5_stage%d_L%d" % (stage, branch), (weight_decay, 0))
+    x = BatchNormalization()(x)
+    x = relu(x)
+    x = conv(x, 128, 1, "Mconv6_stage%d_L%d" % (stage, branch), (weight_decay, 0))
+    x = BatchNormalization()(x)
+    x = relu(x)
+    x = conv(x, num_p, 1, "Mconv7_stage%d_L%d" % (stage, branch), (weight_decay, 0))
+    x = BatchNormalization()(x)
+
+    return x
+
 
 
 def get_training_model(weight_decay):
