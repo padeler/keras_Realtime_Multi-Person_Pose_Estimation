@@ -1,3 +1,5 @@
+from tensorflow import keras
+
 from keras.models import Model
 from keras.layers.merge import Concatenate
 from keras.layers import Activation, Input, Lambda

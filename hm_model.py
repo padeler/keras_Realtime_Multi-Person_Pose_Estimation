@@ -1,11 +1,9 @@
+from tensorflow import keras
 from keras.models import Model
 from keras.layers.merge import Concatenate
 from keras.layers import Activation, Input, Lambda, BatchNormalization
 from keras.layers.convolutional import Conv2D
 from keras.layers.pooling import MaxPooling2D
-from keras.layers.merge import Multiply
-from keras.regularizers import l2
-from keras.initializers import random_normal,constant
 import keras.backend as K
 
 from model import stage1_block, stageT_block, apply_mask
