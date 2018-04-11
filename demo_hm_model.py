@@ -86,7 +86,7 @@ def visualize(canvas, all_peaks):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', type=str, default='result.png', help='output image')
-    parser.add_argument('--model', type=str, default='training/hm_model_weights.best.h5', help='path to the weights file')
+    parser.add_argument('--model', type=str, default='training/resnet_trconv_hm_weights.h5', help='path to the weights file')
 
     args = parser.parse_args()
     output = args.output

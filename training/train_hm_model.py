@@ -20,8 +20,7 @@ momentum = 0.9
 weight_decay = 5e-4
 lr_policy =  "step"
 gamma = 0.333
-stepsize = 136106 #68053   // after each stepsize iterations update learning rate: lr=lr*gamma
-max_iter = 200000 # 600000
+max_epochs  = 200000 # 600000
 stages = 3
 
 # True = start data generator client, False = use augmented dataset file (deprecated)
@@ -74,6 +73,10 @@ val_client.start()
 val_di = val_client.gen()
 # val_samples = 2645 # All validation samples in the COCO dataset
 val_samples = 200
+
+
+stepsize = 100*(train_samples//batch_size)  # after each stepsize iterations update learning rate: lr=lr*gamma
+
 
 # setup lr multipliers for conv layers
 lr_mult=dict()
@@ -137,7 +140,7 @@ model.compile(loss=losses, optimizer=multisgd, metrics=["accuracy"])
 
 model.fit_generator(train_di,
                     steps_per_epoch=train_samples // batch_size,
-                    epochs=max_iter,
+                    epochs=max_epochs,
                     callbacks=callbacks_list,
                     validation_data=val_di,
                     validation_steps=val_samples // batch_size,

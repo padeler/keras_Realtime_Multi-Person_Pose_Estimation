@@ -1,3 +1,4 @@
+from tensorflow import keras
 import sys
 import os
 import pandas
@@ -26,7 +27,7 @@ max_iter = 200000 # 600000
 
 stages = 3
 
-WEIGHTS_BEST = "hm_model_weights.best.h5"
+WEIGHTS_BEST = "resnet_trconv_hm_weights.h5"
 
 
 val_client = DataGeneratorClient(port=5556, host="localhost", hwm=160, batch_size=batch_size, with_pafs=False, stages=stages)
@@ -82,13 +83,13 @@ losses = {}
 for i in range(1, stages+1):
     losses["weight_stage%d_L2" % i] = eucl_loss
 
+print "KERAS VERSION: ", keras.__version__
 
 # sgd optimizer with lr multipliers
 multisgd = MultiSGD(lr=base_lr, momentum=momentum, decay=0.0, nesterov=False, lr_mult=lr_mult)
-
 # start training
 model.compile(loss=losses, optimizer=multisgd, metrics=["accuracy"])
-print "Running model.evaluate() on %d samples"%val_samples
+print "Running model.evaluate() on %d samples" % val_samples
 results = model.evaluate_generator(val_di,
                         steps=val_samples // batch_size,
                         use_multiprocessing=False)
