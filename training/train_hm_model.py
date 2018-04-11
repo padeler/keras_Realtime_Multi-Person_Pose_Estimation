@@ -27,7 +27,7 @@ stages = 3
 # True = start data generator client, False = use augmented dataset file (deprecated)
 use_client_gen = True
 
-WEIGHTS_BEST = "hm_model_weights.best.h5"
+WEIGHTS_BEST = "resnet_trconv_hm_weights.h5"
 TRAINING_LOG = "training_hm_model.csv"
 LOGS_DIR = "./logs"
 

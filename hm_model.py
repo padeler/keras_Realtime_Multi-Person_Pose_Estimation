@@ -2,7 +2,7 @@ from tensorflow import keras
 from keras.models import Model
 from keras.layers.merge import Concatenate
 from keras.layers import Activation, Input, Lambda, BatchNormalization
-from keras.layers.convolutional import Conv2D
+from keras.layers.convolutional import Conv2D, Conv2DTranspose
 from keras.layers.pooling import MaxPooling2D
 import keras.backend as K
 
@@ -39,6 +39,12 @@ def resnet50_block(img_input):
     x = identity_block(x, 3, [256, 256, 1024], stage=4, block='e')
     x = identity_block(x, 3, [256, 256, 1024], stage=4, block='f')
 
+
+    # transpose convolution to increase resolution
+    x = Conv2DTranspose(128, (4, 4), strides=(2, 2), padding="same")(x)
+    x = BatchNormalization(axis=bn_axis, name='bn_trconv1')(x)
+    x = Activation('relu')(x)
+
     return x
 
 def get_training_model(weight_decay):
@@ -60,8 +66,9 @@ def get_training_model(weight_decay):
 
     img_normalized = Lambda(lambda x: x / 256 - 0.5)(img_input) # [-0.5, 0.5]
 
-    # RESNET50 up to block 4f
+    # RESNET50 up to block 4f and a transposed convolution in the end to increase resolution
     stage0_out = resnet50_block(img_normalized)
+
 
     # stage 1 - branch 2 (confidence maps)
     stage1_branch2_out = stage1_block(stage0_out, np_branch2, 2, weight_decay)
@@ -95,7 +102,7 @@ def get_testing_model(img_input_shape = (None, None, 3)):
 
     img_normalized = Lambda(lambda x: x / 256 - 0.5)(img_input) # [-0.5, 0.5]
 
-    # RESNET50 up to block 4f
+    # RESNET50 up to block 4f and a transposed convolution in the end to increase resolution
     stage0_out = resnet50_block(img_normalized)
 
     # stage 1 - branch 2 (confidence maps)
