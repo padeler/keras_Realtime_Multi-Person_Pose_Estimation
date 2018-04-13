@@ -8,10 +8,10 @@ import numpy as np
 import util
 from config_reader import config_reader
 from scipy.ndimage.filters import gaussian_filter
-from hm_model import get_testing_model
 
 
-
+from vnect_model import get_testing_model
+# from hm_model import get_testing_model
 
 # visualize
 colors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0], [85, 255, 0],
@@ -89,7 +89,8 @@ def visualize(canvas, all_peaks, part_str):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', type=str, default='result.png', help='output image')
-    parser.add_argument('--model', type=str, default='training/resnet_trconv_hm_weights.h5', help='path to the weights file')
+    # parser.add_argument('--model', type=str, default='training/resnet_trconv_hm_weights.h5', help='path to the weights file')
+    parser.add_argument('--model', type=str, default='training/vnect_weights.h5', help='path to the weights file')
 
     args = parser.parse_args()
     output = args.output

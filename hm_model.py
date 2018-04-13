@@ -114,7 +114,8 @@ def get_testing_model(img_input_shape = (None, None, 3)):
 
     img_input = Input(shape=img_input_shape)
 
-    img_normalized = Lambda(lambda x: x / 256 - 0.5)(img_input) # [-0.5, 0.5]
+    # For TF backend: resnet50 expects image input in range [-1.0,1.0]
+    img_normalized = Lambda(lambda x: x / 127.5 - 1.0)(img_input)
 
     # RESNET50 up to block 4f and a transposed convolution in the end to increase resolution
     stage0_out = resnet50_block(img_normalized)
