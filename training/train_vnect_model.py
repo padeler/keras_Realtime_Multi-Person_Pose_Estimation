@@ -22,7 +22,7 @@ batch_size = 12
 # momentum = 0.9
 # weight_decay = 5e-4
 # lr_policy =  "step"
-gamma = 0.333
+# gamma = 0.333
 
 max_epochs  = 200000 # 600000
 
@@ -120,7 +120,7 @@ callbacks_list = [checkpoint, csv_logger, tb]
 
 # sgd optimizer with lr multipliers
 # multisgd = MultiSGD(lr=base_lr, momentum=momentum, decay=0.0, nesterov=False, lr_mult=lr_mult)
-adadelta = Adadelta(decay=gamma)
+adadelta = Adadelta()
 # start training
 
 model.compile(loss=losses, optimizer=adadelta, metrics=["accuracy", acc_norm])
