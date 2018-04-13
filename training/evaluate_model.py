@@ -15,6 +15,7 @@ from keras.applications.resnet50 import ResNet50
 
 import keras.backend as K
 
+from hm_model import acc_norm
 
 batch_size = 100
 base_lr = 4e-5 # 2e-5
@@ -88,7 +89,7 @@ print "KERAS VERSION: ", keras.__version__
 # sgd optimizer with lr multipliers
 multisgd = MultiSGD(lr=base_lr, momentum=momentum, decay=0.0, nesterov=False, lr_mult=lr_mult)
 # start training
-model.compile(loss=losses, optimizer=multisgd, metrics=["accuracy"])
+model.compile(loss=losses, optimizer=multisgd, metrics=[acc_norm])
 print "Running model.evaluate() on %d samples" % val_samples
 results = model.evaluate_generator(val_di,
                         steps=val_samples // batch_size,

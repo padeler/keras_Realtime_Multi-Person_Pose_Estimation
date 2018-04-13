@@ -13,6 +13,7 @@ from keras.layers.convolutional import Conv2D
 from keras.applications.resnet50 import ResNet50
 
 import keras.backend as K
+from hm_model import acc_norm
 
 batch_size = 10
 base_lr = 4e-5 # 2e-5
@@ -29,6 +30,7 @@ use_client_gen = True
 WEIGHTS_BEST = "resnet_trconv_hm_weights.h5"
 TRAINING_LOG = "training_hm_model.csv"
 LOGS_DIR = "./logs"
+
 
 def get_last_epoch():
     data = pandas.read_csv(TRAINING_LOG)
@@ -136,7 +138,7 @@ callbacks_list = [lrate, checkpoint, csv_logger, tb]
 multisgd = MultiSGD(lr=base_lr, momentum=momentum, decay=0.0, nesterov=False, lr_mult=lr_mult)
 
 # start training
-model.compile(loss=losses, optimizer=multisgd, metrics=["accuracy"])
+model.compile(loss=losses, optimizer=multisgd, metrics=[acc_norm])
 
 model.fit_generator(train_di,
                     steps_per_epoch=train_samples // batch_size,

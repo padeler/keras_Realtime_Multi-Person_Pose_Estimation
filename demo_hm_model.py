@@ -1,3 +1,5 @@
+from tensorflow import keras
+from keras.models import Model
 import argparse
 import cv2
 import math
@@ -75,10 +77,11 @@ def find_peaks(hm, thre1):
     return all_peaks
 
 
-def visualize(canvas, all_peaks):
+def visualize(canvas, all_peaks, part_str):
     for i in range(18):
         for j in range(len(all_peaks[i])):
             cv2.circle(canvas, all_peaks[i][j][0:2], 4, colors[i], thickness=-1)
+            cv2.putText(canvas, part_str[i], all_peaks[i][j][0:2], 0, 0.5, colors[i])
 
     return canvas
 
@@ -97,8 +100,16 @@ if __name__ == '__main__':
 
     # authors of original model don't use
     # vgg normalization (subtracting mean) on input images
-    model = get_testing_model()
-    model.load_weights(keras_weights_file)
+    full_model = get_testing_model()
+    full_model.load_weights(keras_weights_file)
+
+    # model = Model(inputs=full_model.input,
+    #                                  outputs=full_model.get_layer("Mconv5_stage1_L2").output)
+    # model = Model(inputs=full_model.input,
+    #                                  outputs=full_model.get_layer("Mconv7_stage2_L2").output)
+
+    model = full_model
+
 
     print('start loop...')
 
@@ -135,8 +146,8 @@ if __name__ == '__main__':
         cv2.imshow("HM", viz)
 
         peaks = find_peaks(hm, params['thre1'])
-        viz = visualize(frame,peaks)
-        cv2.imshow("VIZ",viz)
+        viz = visualize(frame, peaks, model_params["part_str"])
+        cv2.imshow("VIZ", viz)
 
 
         k = cv2.waitKey(30)

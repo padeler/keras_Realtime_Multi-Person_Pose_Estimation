@@ -11,6 +11,15 @@ from model import stage1_block, stageT_block, apply_mask
 from keras.applications.resnet50 import conv_block, identity_block
 
 
+def acc_norm(y_true, y_pred):
+    min_val = 0.01
+    mask_true = K.cast(K.greater(y_true, min_val), K.floatx())
+    mask_pred = K.cast(K.greater(y_pred, min_val), K.floatx())
+    delta = K.abs(mask_true - mask_pred)
+    error = K.sum(delta)/K.sum(mask_true)
+    return 1.0 - error
+
+
 def resnet50_block(img_input):
 
     if K.image_data_format() == 'channels_last':
@@ -44,6 +53,10 @@ def resnet50_block(img_input):
     x = Conv2DTranspose(128, (4, 4), strides=(2, 2), padding="same")(x)
     x = BatchNormalization(axis=bn_axis, name='bn_trconv1')(x)
     x = Activation('relu')(x)
+    #
+    # x = Conv2DTranspose(128, (4, 4), strides=(2, 2), padding="same")(x)
+    # x = BatchNormalization(axis=bn_axis, name='bn_trconv2')(x)
+    # x = Activation('relu')(x)
 
     return x
 
@@ -64,7 +77,8 @@ def get_training_model(weight_decay):
     inputs.append(img_input)
     inputs.append(heat_weight_input)
 
-    img_normalized = Lambda(lambda x: x / 256 - 0.5)(img_input) # [-0.5, 0.5]
+    # For TF backend: resnet50 expects image input in range [-1.0,1.0]
+    img_normalized = Lambda(lambda x: x / 127.5 - 1.0)(img_input)
 
     # RESNET50 up to block 4f and a transposed convolution in the end to increase resolution
     stage0_out = resnet50_block(img_normalized)
