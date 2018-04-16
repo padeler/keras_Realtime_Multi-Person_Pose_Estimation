@@ -10,7 +10,8 @@ from config_reader import config_reader
 from scipy.ndimage.filters import gaussian_filter
 
 
-from vnect_model import get_testing_model
+import model
+# import vnect_model as model
 # from hm_model import get_testing_model
 
 # visualize
@@ -33,10 +34,10 @@ def preprocess(oriImg, model_params):
     return input_img, pad
 
 
-def postprocess(output_blobs, model_params, pad, oriImgShape, inputImgShape):
+def postprocess(output_blobs, model_params, pad, oriImgShape, inputImgShape, hm_idx=0):
 
     # extract outputs, resize, and remove padding
-    heatmap = np.squeeze(output_blobs[0])  # output 0 is heatmaps
+    heatmap = np.squeeze(output_blobs[hm_idx])  # output at hm_idx is heatmaps
     heatmap = cv2.resize(heatmap, (0, 0), fx=model_params['stride'], fy=model_params['stride'],
                          interpolation=cv2.INTER_CUBIC)
     heatmap = heatmap[:inputImgShape[0] - pad[2], :inputImgShape[1] - pad[3], :]
@@ -88,20 +89,19 @@ def visualize(canvas, all_peaks, part_str):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--output', type=str, default='result.png', help='output image')
+
     # parser.add_argument('--model', type=str, default='training/resnet_trconv_hm_weights.h5', help='path to the weights file')
     parser.add_argument('--model', type=str, default='training/vnect_weights.h5', help='path to the weights file')
+    parser.add_argument('--model', type=str, default='model/keras/model.h5', help='path to the weights file')
 
     args = parser.parse_args()
-    output = args.output
     keras_weights_file = args.model
 
 
     # load model
-
     # authors of original model don't use
     # vgg normalization (subtracting mean) on input images
-    full_model = get_testing_model()
+    full_model = model.get_testing_model()
     full_model.load_weights(keras_weights_file)
 
     # model = Model(inputs=full_model.input,
@@ -133,7 +133,7 @@ if __name__ == '__main__':
         output_blobs = model.predict(input_img)
         toc = time.time()
 
-        hm = postprocess(output_blobs, model_params, pad, frame.shape, input_img.shape[1:])
+        hm = postprocess(output_blobs, model_params, pad, frame.shape, input_img.shape[1:],hm_idx=1)
 
         bg = cv2.normalize(hm[:,:,18], None, 0,255, cv2.NORM_MINMAX, cv2.CV_8UC1)
         viz = cv2.normalize(np.sum(hm[:,:,:18],axis=2), None, 0,255, cv2.NORM_MINMAX, cv2.CV_8UC1)
