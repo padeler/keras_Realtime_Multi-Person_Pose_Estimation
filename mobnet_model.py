@@ -4,41 +4,44 @@ from keras.layers.merge import Concatenate
 from keras.layers import Activation, Input, Lambda, BatchNormalization
 from keras.layers.convolutional import Conv2D, Conv2DTranspose
 from keras.layers import Add, Multiply, LeakyReLU
+from keras.applications import mobilenet
 
 from keras.layers.pooling import MaxPooling2D
 import keras.backend as K
 
-from keras.applications.resnet50 import conv_block, identity_block
+from keras.applications.mobilenet import _conv_block, _depthwise_conv_block
 
 if K.image_data_format() == 'channels_last':
     bn_axis = 3
 else:
     bn_axis = 1
 
-def resnet50_block(img_input):
 
+def mobilenet_block(img_input, alpha=1.0, depth_multiplier=1):
 
-    x = Conv2D(
-        64, (7, 7), strides=(2, 2), padding='same', name='conv1')(img_input)
-    x = BatchNormalization(axis=bn_axis, name='bn_conv1')(x)
-    x = Activation('relu')(x)
-    x = MaxPooling2D((3, 3), strides=(2, 2))(x)
+    x = _conv_block(img_input, 32, alpha, strides=(2, 2))
+    x = _depthwise_conv_block(x, 64, alpha, depth_multiplier, block_id=1)
 
-    x = conv_block(x, 3, [64, 64, 256], stage=2, block='a', strides=(1, 1))
-    x = identity_block(x, 3, [64, 64, 256], stage=2, block='b')
-    x = identity_block(x, 3, [64, 64, 256], stage=2, block='c')
+    x = _depthwise_conv_block(x, 128, alpha, depth_multiplier,
+                              strides=(2, 2), block_id=2)
+    x = _depthwise_conv_block(x, 128, alpha, depth_multiplier, block_id=3)
 
-    x = conv_block(x, 3, [128, 128, 512], stage=3, block='a')
-    x = identity_block(x, 3, [128, 128, 512], stage=3, block='b')
-    x = identity_block(x, 3, [128, 128, 512], stage=3, block='c')
-    x = identity_block(x, 3, [128, 128, 512], stage=3, block='d')
+    x = _depthwise_conv_block(x, 256, alpha, depth_multiplier,
+                              strides=(2, 2), block_id=4)
+    x = _depthwise_conv_block(x, 256, alpha, depth_multiplier, block_id=5)
 
-    x = conv_block(x, 3, [256, 256, 1024], stage=4, block='a')
-    x = identity_block(x, 3, [256, 256, 1024], stage=4, block='b')
-    x = identity_block(x, 3, [256, 256, 1024], stage=4, block='c')
-    x = identity_block(x, 3, [256, 256, 1024], stage=4, block='d')
-    x = identity_block(x, 3, [256, 256, 1024], stage=4, block='e')
-    x = identity_block(x, 3, [256, 256, 1024], stage=4, block='f')
+    x = _depthwise_conv_block(x, 512, alpha, depth_multiplier,
+                              strides=(2, 2), block_id=6)
+    x = _depthwise_conv_block(x, 512, alpha, depth_multiplier, block_id=7)
+    x = _depthwise_conv_block(x, 512, alpha, depth_multiplier, block_id=8)
+    x = _depthwise_conv_block(x, 512, alpha, depth_multiplier, block_id=9)
+    x = _depthwise_conv_block(x, 512, alpha, depth_multiplier, block_id=10)
+    x = _depthwise_conv_block(x, 512, alpha, depth_multiplier, block_id=11)
+
+    # XXX TODO Add a transpose conv here and concat with earlier features from block 5 to increase res.
+    # x = Conv2DTranspose(512, (4, 4), strides=(2, 2), padding="same", name="MConv4_block2")(x)
+    # x = BatchNormalization(axis=bn_axis, name='bn_trconv42')(x)
+    # x = Activation('relu')(x)
 
     return x
 
@@ -119,8 +122,8 @@ def get_training_model():
     # For TF backend: resnet50 expects image input in range [-1.0,1.0]
     img_normalized = Lambda(lambda x: x / 127.5 - 1.0)(img_input)
 
-    # RESNET50 up to block 4f
-    stage0_out = resnet50_block(img_normalized)
+    # mobilenet up to block 11
+    stage0_out = mobilenet_block(img_normalized)
 
     block1_out = vnect_block1(stage0_out) # up to the sum
     block2_out = vnect_block2(block1_out, np_branch2)
@@ -142,7 +145,7 @@ def get_testing_model(img_input_shape = (None, None, 3)):
     img_normalized = Lambda(lambda x: x / 127.5 - 1.0)(img_input)
 
     # RESNET50 up to block 4f and a transposed convolution in the end to increase resolution
-    stage0_out = resnet50_block(img_normalized)
+    stage0_out = mobilenet_block(img_normalized)
 
     block1_out = vnect_block1(stage0_out) # up to the sum
     block2_out = vnect_block2(block1_out, np_branch2)
