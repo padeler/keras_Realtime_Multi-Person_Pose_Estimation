@@ -10,9 +10,9 @@ from config_reader import config_reader
 from scipy.ndimage.filters import gaussian_filter
 
 
-import model
+# import model
 # import vnect_model as model
-# from hm_model import get_testing_model
+import mobnet_model as model
 
 # visualize
 colors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0], [85, 255, 0],
@@ -91,8 +91,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # parser.add_argument('--model', type=str, default='training/resnet_trconv_hm_weights.h5', help='path to the weights file')
-    parser.add_argument('--model', type=str, default='training/vnect_weights.h5', help='path to the weights file')
-    parser.add_argument('--model', type=str, default='model/keras/model.h5', help='path to the weights file')
+    # parser.add_argument('--model', type=str, default='model/keras/model.h5', help='path to the weights file')
+    # parser.add_argument('--model', type=str, default='training/vnect_weights.h5', help='path to the weights file')
+    parser.add_argument('--model', type=str, default='training/mobnet_weights.h5', help='path to the weights file')
 
     args = parser.parse_args()
     keras_weights_file = args.model
@@ -133,9 +134,9 @@ if __name__ == '__main__':
         output_blobs = model.predict(input_img)
         toc = time.time()
 
-        hm = postprocess(output_blobs, model_params, pad, frame.shape, input_img.shape[1:],hm_idx=1)
+        hm = postprocess(output_blobs, model_params, pad, frame.shape, input_img.shape[1:])
 
-        bg = cv2.normalize(hm[:,:,18], None, 0,255, cv2.NORM_MINMAX, cv2.CV_8UC1)
+        bg = cv2.normalize(hm[:,:,18], None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8UC1)
         viz = cv2.normalize(np.sum(hm[:,:,:18],axis=2), None, 0,255, cv2.NORM_MINMAX, cv2.CV_8UC1)
         cv2.imshow("BG", bg)
 
