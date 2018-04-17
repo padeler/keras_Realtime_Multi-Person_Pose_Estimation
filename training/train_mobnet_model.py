@@ -7,7 +7,7 @@ from ds_generator_client import DataGeneratorClient
 from keras.callbacks import ModelCheckpoint, CSVLogger, TensorBoard
 from keras.layers.convolutional import Conv2D
 from keras.applications.mobilenet import MobileNet, DepthwiseConv2D
-from keras.optimizers import Adadelta
+from keras.optimizers import Adadelta, Adam, RMSprop
 
 import keras.backend as K
 from hm_model import acc_norm
@@ -35,10 +35,12 @@ if os.path.exists(WEIGHTS_BEST):
 else:
     print("Loading Mobnet weights...")
     last_epoch = 0
-    mn = MobileNet(input_shape=(224,224,3), include_top=False, weights='imagenet', pooling=None)
+    mn = MobileNet(input_shape=(224, 224, 3), include_top=False, weights='imagenet', pooling=None)
 
     lc = 0
     for layer in model.layers:
+        if layer.name is "MConv1_block1":
+            break # nothing to load after this layer
         try:
             mn_layer = mn.get_layer(layer.name)
             if type(mn_layer) is Conv2D or type(mn_layer) is DepthwiseConv2D:
@@ -76,10 +78,13 @@ tb = TensorBoard(log_dir=LOGS_DIR, histogram_freq=0, write_graph=True, write_ima
 
 callbacks_list = [checkpoint, csv_logger, tb]
 
-adadelta = Adadelta()
+opt = Adam(lr=0.001)
 
 
-model.compile(loss=losses, optimizer=adadelta, metrics=["accuracy", acc_norm])
+model.compile(loss=losses, optimizer=opt, metrics=["accuracy", acc_norm])
+
+# model.summary()
+
 model.fit_generator(train_di,
                     steps_per_epoch=train_samples // batch_size,
                     epochs=max_epochs,
