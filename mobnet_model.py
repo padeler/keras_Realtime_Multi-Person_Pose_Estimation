@@ -30,6 +30,8 @@ def mobilenet_block(img_input, alpha=1.0, depth_multiplier=1):
                               strides=(2, 2), block_id=4)
     x = _depthwise_conv_block(x, 256, alpha, depth_multiplier, block_id=5)
 
+    x28 = _depthwise_conv_block(x, 128, alpha, depth_multiplier, block_id=15)
+
     x = _depthwise_conv_block(x, 512, alpha, depth_multiplier,
                               strides=(2, 2), block_id=6)
     x = _depthwise_conv_block(x, 512, alpha, depth_multiplier, block_id=7)
@@ -43,7 +45,7 @@ def mobilenet_block(img_input, alpha=1.0, depth_multiplier=1):
     # x = BatchNormalization(axis=bn_axis, name='bn_trconv42')(x)
     # x = Activation('relu')(x)
 
-    return x
+    return x, x28
 
 
 def vnect_block1(input):
@@ -133,7 +135,7 @@ def vnect_dwc_block1(input, alpha=1.0, depth_multiplier=1):
     return x
 
 
-def vnect_dwc_block2(x, num_p, alpha=1.0, depth_multiplier=1):
+def vnect_dwc_block2(x, x28, num_p, alpha=1.0, depth_multiplier=1):
 
     x = Conv2D(256, (1, 1), use_bias=False, padding='same', name="MConv1_block2")(x)
     x = BatchNormalization(axis=bn_axis, name='bn_MConv12')(x)
@@ -149,6 +151,9 @@ def vnect_dwc_block2(x, num_p, alpha=1.0, depth_multiplier=1):
     x = Conv2DTranspose(128, (4, 4), use_bias=False, strides=(2, 2), padding="same", name="MConv4_block2")(x)
     x = BatchNormalization(axis=bn_axis, name='bn_trconv42')(x)
     x = Activation(relu6)(x)
+
+    x = Add()([x, x28])
+    x = Activation(LeakyReLU6)(x)
 
     # final conv portion.
     x = _depthwise_conv_block(x, 128, alpha, depth_multiplier, block_id=14)
@@ -179,10 +184,10 @@ def get_training_model():
     img_normalized = Lambda(lambda x: x / 127.5 - 1.0)(img_input)
 
     # mobilenet up to block 11
-    stage0_out = mobilenet_block(img_normalized)
+    (stage0_out, stage0_out_hires) = mobilenet_block(img_normalized)
 
     block1_out = vnect_dwc_block1(stage0_out) # up to the sum
-    block2_out = vnect_dwc_block2(block1_out, np_branch2)
+    block2_out = vnect_dwc_block2(block1_out, stage0_out_hires, np_branch2)
 
     tr_out = Multiply(name="weight_block")([block2_out, heat_weight_input])
     outputs.append(tr_out)
@@ -201,10 +206,10 @@ def get_testing_model(img_input_shape = (None, None, 3)):
     img_normalized = Lambda(lambda x: x / 127.5 - 1.0)(img_input)
 
     # mobnet up to block 4f and a transposed convolution in the end to increase resolution
-    stage0_out = mobilenet_block(img_normalized)
+    (stage0_out, stage0_out_hires) = mobilenet_block(img_normalized)
 
     block1_out = vnect_dwc_block1(stage0_out) # up to the sum
-    block2_out = vnect_dwc_block2(block1_out, np_branch2)
+    block2_out = vnect_dwc_block2(block1_out, stage0_out_hires, np_branch2)
 
     model = Model(inputs=[img_input], outputs=[block2_out])
 

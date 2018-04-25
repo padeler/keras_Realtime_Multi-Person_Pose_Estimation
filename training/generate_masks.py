@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 from pycocotools.coco import COCO
 
-mode = "val" # "train" = train, "val" - validation
+mode = "train" # "train" = train, "val" - validation
 
 dataset_dir = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'dataset'))
 
