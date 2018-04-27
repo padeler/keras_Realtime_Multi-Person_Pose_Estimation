@@ -206,3 +206,4 @@ def get_testing_model():
     model = Model(inputs=[img_input], outputs=[stageT_branch1_out, stageT_branch2_out])
 
     return model
+

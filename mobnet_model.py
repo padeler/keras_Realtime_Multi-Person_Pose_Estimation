@@ -22,28 +22,27 @@ def mobilenet_block(img_input, alpha=1.0, depth_multiplier=1):
     x = _conv_block(img_input, 32, alpha, strides=(2, 2))
     x = _depthwise_conv_block(x, 64, alpha, depth_multiplier, block_id=1)
 
-    x = _depthwise_conv_block(x, 128, alpha, depth_multiplier,
-                              strides=(2, 2), block_id=2)
+    x = _depthwise_conv_block(x, 128, alpha, depth_multiplier, strides=(2, 2), block_id=2)
     x = _depthwise_conv_block(x, 128, alpha, depth_multiplier, block_id=3)
 
-    x = _depthwise_conv_block(x, 256, alpha, depth_multiplier,
-                              strides=(2, 2), block_id=4)
-    x = _depthwise_conv_block(x, 256, alpha, depth_multiplier, block_id=5)
+    x = _depthwise_conv_block(x, 256, alpha, depth_multiplier, strides=(2, 2), block_id=4)
+    x_mid = _depthwise_conv_block(x, 256, alpha, depth_multiplier, block_id=5)
 
-    x = _depthwise_conv_block(x, 512, alpha, depth_multiplier,
-                              strides=(2, 2), block_id=6)
+    x = _depthwise_conv_block(x_mid, 512, alpha, depth_multiplier, strides=(2, 2), block_id=6)
+    
     x = _depthwise_conv_block(x, 512, alpha, depth_multiplier, block_id=7)
     x = _depthwise_conv_block(x, 512, alpha, depth_multiplier, block_id=8)
     x = _depthwise_conv_block(x, 512, alpha, depth_multiplier, block_id=9)
     x = _depthwise_conv_block(x, 512, alpha, depth_multiplier, block_id=10)
     x = _depthwise_conv_block(x, 512, alpha, depth_multiplier, block_id=11)
 
+    x_mid = _depthwise_conv_block(x_mid, 128, alpha, depth_multiplier, block_id=15)
     # XXX TODO Add a transpose conv here and concat with earlier features from block 5 to increase res.
     # x = Conv2DTranspose(512, (4, 4), strides=(2, 2), padding="same", name="MConv4_block2")(x)
     # x = BatchNormalization(axis=bn_axis, name='bn_trconv42')(x)
     # x = Activation('relu')(x)
 
-    return x
+    return x, x_mid
 
 
 def vnect_block1(input):
@@ -133,7 +132,7 @@ def vnect_dwc_block1(input, alpha=1.0, depth_multiplier=1):
     return x
 
 
-def vnect_dwc_block2(x, num_p, alpha=1.0, depth_multiplier=1):
+def vnect_dwc_block2(x, x_mid, num_p, alpha=1.0, depth_multiplier=1):
 
     x = Conv2D(256, (1, 1), use_bias=False, padding='same', name="MConv1_block2")(x)
     x = BatchNormalization(axis=bn_axis, name='bn_MConv12')(x)
@@ -149,6 +148,8 @@ def vnect_dwc_block2(x, num_p, alpha=1.0, depth_multiplier=1):
     x = Conv2DTranspose(128, (4, 4), use_bias=False, strides=(2, 2), padding="same", name="MConv4_block2")(x)
     x = BatchNormalization(axis=bn_axis, name='bn_trconv42')(x)
     x = Activation(relu6)(x)
+
+    x = Concatenate()([x,x_mid])
 
     # final conv portion.
     x = _depthwise_conv_block(x, 128, alpha, depth_multiplier, block_id=14)
@@ -179,10 +180,10 @@ def get_training_model():
     img_normalized = Lambda(lambda x: x / 127.5 - 1.0)(img_input)
 
     # mobilenet up to block 11
-    stage0_out = mobilenet_block(img_normalized)
+    stage0_out, x_mid = mobilenet_block(img_normalized)
 
     block1_out = vnect_dwc_block1(stage0_out) # up to the sum
-    block2_out = vnect_dwc_block2(block1_out, np_branch2)
+    block2_out = vnect_dwc_block2(block1_out, x_mid, np_branch2)
 
     tr_out = Multiply(name="weight_block")([block2_out, heat_weight_input])
     outputs.append(tr_out)
@@ -201,11 +202,20 @@ def get_testing_model(img_input_shape = (None, None, 3)):
     img_normalized = Lambda(lambda x: x / 127.5 - 1.0)(img_input)
 
     # mobnet up to block 4f and a transposed convolution in the end to increase resolution
-    stage0_out = mobilenet_block(img_normalized)
+    stage0_out, x_mid = mobilenet_block(img_normalized)
 
     block1_out = vnect_dwc_block1(stage0_out) # up to the sum
-    block2_out = vnect_dwc_block2(block1_out, np_branch2)
+    block2_out = vnect_dwc_block2(block1_out, x_mid, np_branch2)
 
     model = Model(inputs=[img_input], outputs=[block2_out])
 
     return model
+
+
+
+
+if __name__=="__main__":
+    model = get_testing_model((368,368,3))
+    model.summary()
+
+
