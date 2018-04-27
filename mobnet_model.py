@@ -28,11 +28,9 @@ def mobilenet_block(img_input, alpha=1.0, depth_multiplier=1):
 
     x = _depthwise_conv_block(x, 256, alpha, depth_multiplier,
                               strides=(2, 2), block_id=4)
-    x = _depthwise_conv_block(x, 256, alpha, depth_multiplier, block_id=5)
+    x28 = _depthwise_conv_block(x, 256, alpha, depth_multiplier, block_id=5)
 
-    x28 = _depthwise_conv_block(x, 128, alpha, depth_multiplier, block_id=15)
-
-    x = _depthwise_conv_block(x, 512, alpha, depth_multiplier,
+    x = _depthwise_conv_block(x28, 512, alpha, depth_multiplier,
                               strides=(2, 2), block_id=6)
     x = _depthwise_conv_block(x, 512, alpha, depth_multiplier, block_id=7)
     x = _depthwise_conv_block(x, 512, alpha, depth_multiplier, block_id=8)
@@ -152,8 +150,10 @@ def vnect_dwc_block2(x, x28, num_p, alpha=1.0, depth_multiplier=1):
     x = BatchNormalization(axis=bn_axis, name='bn_trconv42')(x)
     x = Activation(relu6)(x)
 
-    x = Add()([x, x28])
-    x = Activation(LeakyReLU6)(x)
+    x = Concatenate()([x, x28])
+    x = _depthwise_conv_block(x, 256, alpha, depth_multiplier, block_id=15)
+
+    # x = Activation(LeakyReLU6)(x)
 
     # final conv portion.
     x = _depthwise_conv_block(x, 128, alpha, depth_multiplier, block_id=14)
