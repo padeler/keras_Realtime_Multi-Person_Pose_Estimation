@@ -19,7 +19,7 @@ else:
 
 def mobilenet2_block(img_input, alpha=1.0, expansion_factor=6, depth_multiplier=1):
 
-    x = _conv_block(img_input, 32, alpha, strides=(2, 2))
+    x = _conv_block(img_input, 32, alpha)#, strides=(2, 2))
     x = _depthwise_conv_block_v2(x, 16, alpha, 1, depth_multiplier, block_id=1)
 
     x = _depthwise_conv_block_v2(x, 24, alpha, expansion_factor, depth_multiplier, block_id=2, strides=(2, 2))
@@ -29,7 +29,7 @@ def mobilenet2_block(img_input, alpha=1.0, expansion_factor=6, depth_multiplier=
     x = _depthwise_conv_block_v2(x, 32, alpha, expansion_factor, depth_multiplier, block_id=5)
     x = _depthwise_conv_block_v2(x, 32, alpha, expansion_factor, depth_multiplier, block_id=6)
 
-    x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=7)#, strides=(2, 2))
+    x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=7, strides=(2, 2))
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=8)
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=9)
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=10)

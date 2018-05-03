@@ -150,3 +150,11 @@ def get_testing_model(img_input_shape = (None, None, 3)):
     model = Model(inputs=[img_input], outputs=[block2_out])
 
     return model
+
+
+
+
+if __name__ == "__main__":
+    model = get_testing_model((224,224,3))
+    model.summary()
+
