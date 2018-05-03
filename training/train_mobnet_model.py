@@ -78,7 +78,7 @@ tb = TensorBoard(log_dir=LOGS_DIR, histogram_freq=0, write_graph=True, write_ima
 
 callbacks_list = [checkpoint, csv_logger, tb]
 
-opt = Adam(lr=0.00001)
+opt = Adadelta()
 
 
 model.compile(loss=losses, optimizer=opt, metrics=["accuracy", acc_norm])

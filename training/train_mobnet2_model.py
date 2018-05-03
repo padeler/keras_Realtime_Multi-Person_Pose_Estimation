@@ -33,13 +33,13 @@ if os.path.exists(WEIGHTS_BEST):
     model.load_weights(WEIGHTS_BEST)
     last_epoch = get_last_epoch() + 1
 else:
-    print("Loading Mobnet weights...")
+    print("Loading Mobnet2 weights...")
     last_epoch = 0
     mn = MobileNetV2(input_shape=(224, 224, 3))
 
     lc = 0
     for layer in model.layers:
-        if layer.name is "MConv1_block1":
+        if layer.name=="MConv6_block2":
             break # nothing to load after this layer
         try:
             mn_layer = mn.get_layer(layer.name)
@@ -48,7 +48,7 @@ else:
                 layer.set_weights(mn_layer.get_weights())
                 lc += 1
         except:
-            print "Skipping Layer ", layer.name
+            print "Skipping Layer [%s]" % layer.name
 
     print "Done loading weights for %d mobilenet2 conv layers" % lc
 

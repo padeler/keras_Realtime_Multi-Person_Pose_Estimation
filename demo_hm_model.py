@@ -12,7 +12,7 @@ from scipy.ndimage.filters import gaussian_filter
 
 # import model
 # import vnect_model as model
-import mobnet_model as model
+import mobnet2_model as model
 
 # visualize
 colors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0], [85, 255, 0],
@@ -93,7 +93,7 @@ if __name__ == '__main__':
     # parser.add_argument('--model', type=str, default='training/resnet_trconv_hm_weights.h5', help='path to the weights file')
     # parser.add_argument('--model', type=str, default='model/keras/model.h5', help='path to the weights file')
     # parser.add_argument('--model', type=str, default='training/vnect_weights.h5', help='path to the weights file')
-    parser.add_argument('--model', type=str, default='training/mobnet_weights.h5', help='path to the weights file')
+    parser.add_argument('--model', type=str, default='training/mobnet2_weights.h5', help='path to the weights file')
 
     args = parser.parse_args()
     keras_weights_file = args.model
