@@ -66,7 +66,7 @@ val_samples = 200  # 2645 # All validation samples in the COCO dataset
 
 # euclidean loss as implemented in caffe https://github.com/BVLC/caffe/blob/master/src/caffe/layers/euclidean_loss_layer.cpp
 def eucl_loss(x, y):
-    return K.sum(K.square(x - y)) / batch_size / 2
+    return K.log(K.sum(K.square(x - y)) / batch_size) # / 2
 
 losses = {}
 losses["weight_block"] = eucl_loss
