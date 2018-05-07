@@ -39,7 +39,7 @@ else:
 
     lc = 0
     for layer in model.layers:
-        if layer.name=="MConv6_block2":
+        if layer.name=="final_conv":
             break # nothing to load after this layer
         try:
             mn_layer = mn.get_layer(layer.name)

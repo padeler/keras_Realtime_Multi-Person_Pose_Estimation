@@ -42,7 +42,7 @@ def mobilenet2_block(img_input, alpha=1.0, expansion_factor=6, depth_multiplier=
     # x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, block_id=15)
     # x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, block_id=16)
 
-    x = _depthwise_conv_block_v2(x, 320, alpha, expansion_factor, depth_multiplier, block_id=17)
+    # x = _depthwise_conv_block_v2(x, 320, alpha, expansion_factor, depth_multiplier, block_id=17)
 
     # if alpha <= 1.0:
     #     penultimate_filters = 1280
@@ -116,9 +116,9 @@ def final_block(x, num_p, alpha=1.0, expansion_factor=6, depth_multiplier=1):
     # # final conv portion.
     # x = _depthwise_conv_block_v2(x, 128, alpha, expansion_factor, depth_multiplier, block_id=24)
 
-    x = Conv2D(num_p, (1, 1), use_bias=False, padding='same', name="MConv6_block2")(x)
-    x = BatchNormalization(axis=bn_axis, name='bn_MConv62')(x) # XXX do we need bn at the final conv?
-    x = Activation(relu6, name="block2_out")(x) # XXX not in the original vnect
+    x = Conv2D(num_p, (1, 1), use_bias=False, padding='same', name="final_conv")(x)
+    # x = BatchNormalization(axis=bn_axis, name='bn_MConv62')(x) # XXX do we need bn at the final conv?
+    x = Activation(relu6, name="hm_out")(x) # XXX not in the original vnect
 
     return x
 
