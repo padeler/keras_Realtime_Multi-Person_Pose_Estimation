@@ -963,8 +963,10 @@ def _depthwise_conv_block_v2(inputs, pointwise_conv_filters, alpha, expansion_fa
     """
     channel_axis = 1 if K.image_data_format() == 'channels_first' else -1
     input_shape = K.int_shape(inputs)
-    depthwise_conv_filters = _make_divisible(input_shape[channel_axis] * expansion_factor)
-    pointwise_conv_filters = _make_divisible(pointwise_conv_filters * alpha)
+
+    # XXX PPP removed _make_divisible
+    depthwise_conv_filters = int(input_shape[channel_axis] * expansion_factor)
+    pointwise_conv_filters = int(pointwise_conv_filters * alpha)
 
     if depthwise_conv_filters > input_shape[channel_axis]:
         x = Conv2D(depthwise_conv_filters, (1, 1),

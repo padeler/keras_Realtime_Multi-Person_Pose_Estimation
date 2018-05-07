@@ -133,19 +133,24 @@ if __name__ == '__main__':
         tic = time.time()
         output_blobs = model.predict(input_img)
         toc = time.time()
-
+        print 'time to predict() %.5f' % (toc - tic)
+        
         hm = postprocess(output_blobs, model_params, pad, frame.shape, input_img.shape[1:])
 
-        bg = cv2.normalize(hm[:,:,18], None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8UC1)
-        viz = cv2.normalize(np.sum(hm[:,:,:18],axis=2), None, 0,255, cv2.NORM_MINMAX, cv2.CV_8UC1)
-        cv2.imshow("BG", bg)
+        hm_sum = np.sum(hm[:,:,:18],axis=2)
 
+        bg = hm[:,:,18]        
         nose = hm[:,:,0]
-        print "nose ", np.min(nose),np.max(nose)
-        noseNorm = cv2.normalize(nose,None,0,255,cv2.NORM_MINMAX, cv2.CV_8UC1)
-        # cv2.imshow("NOSE", noseNorm)
+        bg_norm = cv2.normalize(bg, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8UC1)
 
-        cv2.imshow("HM", viz)
+        print "nose ", np.min(nose),np.max(nose)
+        print "hm_sum ", np.min(hm_sum),np.max(hm_sum)
+        print "bg ", np.min(bg),np.max(bg)
+
+        hm_norm = cv2.normalize(hm_sum, None, 0,255, cv2.NORM_MINMAX, cv2.CV_8UC1)
+
+        cv2.imshow("HM", hm_norm)
+        cv2.imshow("BG", bg_norm)
 
         peaks = find_peaks(hm, params['thre1'])
         viz = visualize(frame, peaks, model_params["part_str"])
@@ -153,7 +158,7 @@ if __name__ == '__main__':
 
 
         k = cv2.waitKey(30)
-        print 'time to predict() %.5f' % (toc - tic)
+        
 
     cv2.destroyAllWindows()
 

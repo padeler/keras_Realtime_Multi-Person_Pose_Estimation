@@ -21,7 +21,9 @@ from hm_model import acc_norm
 batch_size = 100
 train_samples = 2000
 
-WEIGHTS_BEST = "vnect_weights.h5"
+# WEIGHTS_BEST = "vnect_weights.h5"
+WEIGHTS_BEST = "mobnet2_weights.h5"
+
 
 
 val_client = DataGeneratorClient(port=5556, host="localhost", hwm=160, batch_size=batch_size, with_pafs=False, stages=1)
@@ -30,7 +32,7 @@ val_di = val_client.gen()
 val_samples = 2000
 
 
-import vnect_model as md
+import mobnet2_model as md
 model = md.get_training_model()
 
 # load previous weights or vgg19 if this is the first run
