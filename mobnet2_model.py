@@ -4,12 +4,13 @@ from keras.layers.merge import Concatenate
 from keras.layers import Activation, Input, Lambda, BatchNormalization
 from keras.layers.convolutional import Conv2D, Conv2DTranspose
 from keras.layers import Add, Multiply, LeakyReLU
+from keras.layers.merge import add
 from keras.applications import mobilenet
 
 from keras.layers.pooling import MaxPooling2D
 import keras.backend as K
 
-from mobilenets import _depthwise_conv_block_v2, _conv_block, relu6
+from mobilenets import _depthwise_conv_block_v2, _conv_block, relu6, DepthwiseConv2D
 
 if K.image_data_format() == 'channels_last':
     bn_axis = 3
@@ -38,18 +39,18 @@ def mobilenet2_block(img_input, alpha=1.0, expansion_factor=6, depth_multiplier=
     x = _depthwise_conv_block_v2(x, 96, alpha, expansion_factor, depth_multiplier, block_id=12)
     x = _depthwise_conv_block_v2(x, 96, alpha, expansion_factor, depth_multiplier, block_id=13)
 
-    # x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, block_id=14)#, strides=(2, 2))
-    # x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, block_id=15)
-    # x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, block_id=16)
+    x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, block_id=14)#, strides=(2, 2))
+    x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, block_id=15)
+    x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, block_id=16)
 
-    # x = _depthwise_conv_block_v2(x, 320, alpha, expansion_factor, depth_multiplier, block_id=17)
+    x = _depthwise_conv_block_v2(x, 320, alpha, expansion_factor, depth_multiplier, block_id=17)
 
-    # if alpha <= 1.0:
-    #     penultimate_filters = 1280
-    # else:
-    #     penultimate_filters = int(1280 * alpha)
+    if alpha <= 1.0:
+        penultimate_filters = 1280
+    else:
+        penultimate_filters = int(1280 * alpha)
 
-    # x = _conv_block(x, penultimate_filters, alpha=1.0, kernel=(1, 1), block_id=18)
+    x = _conv_block(x, penultimate_filters, alpha=1.0, kernel=(1, 1), block_id=18)
 
 
     return x
@@ -104,20 +105,26 @@ def vnect_dwc_block2(x, num_p, alpha=1.0, expansion_factor=6, depth_multiplier=1
 
     return x
 
+def fb_conv(inputs, num_p, kernel=(1,1), block_id=1):
+    channel_axis = 1 if K.image_data_format() == 'channels_first' else -1
+    x = Conv2D(num_p, kernel, padding='same', use_bias=False, name='fb_conv%d' % block_id)(inputs)
+    x = BatchNormalization(axis=channel_axis, name='fb_conv%d_bn' % block_id)(x)
+    return Activation(relu6, name='fb_conv%d_relu' % block_id)(x)
 
 
+def final_block(x, num_p):
 
-def final_block(x, num_p, alpha=1.0, expansion_factor=6, depth_multiplier=1):
+    stage0 = fb_conv(x, num_p, kernel=(1,1), block_id=19)
+    stage1 = fb_conv(stage0, num_p, kernel=(3,3), block_id=20)
+    stage1 = add([stage0, stage1])
+    stage2 = fb_conv(stage1, num_p, kernel=(3,3), block_id=21)
+    stage2 = add([stage1, stage2])
 
-    stage0 = _depthwise_conv_block_v2(x, num_p, alpha, expansion_factor, depth_multiplier, block_id=19)
-    stage1 = _depthwise_conv_block_v2(stage0, num_p, alpha, expansion_factor, depth_multiplier, block_id=20)
 
-    # XXX PPP maybe we need another conv block (1x1 or 3x3 after the ADD (of block 20)
-
-    # x = Conv2D(128, (1, 1), use_bias=True, padding='same', name="penultimate_conv")(x)
-    # x = Conv2D(num_p, (1, 1), use_bias=True, padding='same', name="final_conv")(stage1)
-    # x = BatchNormalization(axis=bn_axis, name='bn_MConv62')(x) # XXX do we need bn at the final conv?
-    x = Activation(relu6, name="hm_out")(stage1) # XXX not in the original vnect
+    # XXX PPP maybe we dont need another conv block (after the ADD (of block 20)
+    x = Conv2D(num_p, (1, 1), use_bias=True, padding='same', name="final_conv")(stage1)
+    # x = BatchNormalization(axis=bn_axis, name='bn_MConv62')(x) # XXX do we need bn at the final conv? (tunrs out it is good idea)
+    # x = Activation(relu6, name="hm_out")(x) # XXX not in the original vnect nor openpose
 
     return x
 
