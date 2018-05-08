@@ -114,15 +114,16 @@ def fb_conv(inputs, num_p, kernel=(1,1), block_id=1):
 
 def final_block(x, num_p):
 
-    stage0 = fb_conv(x, num_p, kernel=(1,1), block_id=19)
-    stage1 = fb_conv(stage0, num_p, kernel=(3,3), block_id=20)
-    stage1 = add([stage0, stage1])
-    stage2 = fb_conv(stage1, num_p, kernel=(3,3), block_id=21)
-    stage2 = add([stage1, stage2])
-
+    # stage0 = fb_conv(x, num_p, kernel=(1,1), block_id=19)
+    # stage1 = fb_conv(stage0, num_p, kernel=(3,3), block_id=20)
+    # stage1 = add([stage0, stage1])
+    # stage2 = fb_conv(stage1, num_p, kernel=(3,3), block_id=21)
+    # stage2 = add([stage1, stage2])
 
     # XXX PPP maybe we dont need another conv block (after the ADD (of block 20)
-    x = Conv2D(num_p, (1, 1), use_bias=True, padding='same', name="final_conv")(stage1)
+    x = Conv2D(num_p, (1, 1), use_bias=True, padding='same', name="final_conv")(x)
+    x = Activation('softmax', name='act_softmax')(x) 
+
     # x = BatchNormalization(axis=bn_axis, name='bn_MConv62')(x) # XXX do we need bn at the final conv? (tunrs out it is good idea)
     # x = Activation(relu6, name="hm_out")(x) # XXX not in the original vnect nor openpose
 
