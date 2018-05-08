@@ -109,15 +109,17 @@ def vnect_dwc_block2(x, num_p, alpha=1.0, expansion_factor=6, depth_multiplier=1
 
 def final_block(x, num_p, alpha=1.0, expansion_factor=6, depth_multiplier=1):
 
-    stage0 = _depthwise_conv_block_v2(x, num_p, alpha, expansion_factor, depth_multiplier, block_id=19)
-    stage1 = _depthwise_conv_block_v2(stage0, num_p, alpha, expansion_factor, depth_multiplier, block_id=20)
+    # stage0 = _depthwise_conv_block_v2(x, num_p, alpha, expansion_factor, depth_multiplier, block_id=19)
+    # stage1 = _depthwise_conv_block_v2(stage0, num_p, alpha, expansion_factor, depth_multiplier, block_id=20)
 
     # XXX PPP maybe we need another conv block (1x1 or 3x3 after the ADD (of block 20)
 
     # x = Conv2D(128, (1, 1), use_bias=True, padding='same', name="penultimate_conv")(x)
-    # x = Conv2D(num_p, (1, 1), use_bias=True, padding='same', name="final_conv")(stage1)
+    x = Conv2D(num_p, (1, 1), use_bias=True, padding='same', name="final_conv")(x)
+    x = Activation("softmax",name="act_softmax")(x)
     # x = BatchNormalization(axis=bn_axis, name='bn_MConv62')(x) # XXX do we need bn at the final conv?
-    x = Activation(relu6, name="hm_out")(stage1) # XXX not in the original vnect
+    # x = Activation(relu6, name="hm_out")(stage1) # XXX not in the original vnect
+
 
     return x
 
