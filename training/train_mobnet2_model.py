@@ -39,7 +39,7 @@ else:
 
     lc = 0
     for layer in model.layers:
-        if layer.name=="final_conv":
+        if layer.name=="stage1_conv1":
             break # nothing to load after this layer
         try:
             mn_layer = mn.get_layer(layer.name)
@@ -53,7 +53,8 @@ else:
     print "Done loading weights for %d mobilenet2 conv layers" % lc
 
 # prepare generators
-stages = 1
+stages = 3
+
 train_client = DataGeneratorClient(port=5555, host="localhost", hwm=160, batch_size=batch_size, with_pafs=False, stages=stages)
 train_client.start()
 train_di = train_client.gen()
@@ -69,7 +70,8 @@ def eucl_loss(x, y):
     return K.sum(K.square(x - y)) / batch_size / 2
 
 losses = {}
-losses["weight_block"] = eucl_loss
+for sn in range(stages):
+    losses["s%d"%sn] = eucl_loss
 
 # configure callbacks
 checkpoint = ModelCheckpoint(WEIGHTS_BEST, monitor='loss', verbose=0, save_best_only=False, save_weights_only=True, mode='min', period=1)
@@ -79,7 +81,7 @@ tb = TensorBoard(log_dir=LOGS_DIR, histogram_freq=0, write_graph=True, write_ima
 callbacks_list = [checkpoint, csv_logger, tb]
 
 
-opt = Adadelta(lr=0.001)
+opt = Adadelta()
 
 
 model.compile(loss=losses, optimizer=opt, metrics=["accuracy", acc_norm])
