@@ -34,7 +34,7 @@ def mobilenet2_block(img_input, alpha=1.0, expansion_factor=6, depth_multiplier=
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=8)
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=9)
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=10)
-
+    
     x = _depthwise_conv_block_v2(x, 96, alpha, expansion_factor, depth_multiplier, block_id=11)
     x = _depthwise_conv_block_v2(x, 96, alpha, expansion_factor, depth_multiplier, block_id=12)
     x = _depthwise_conv_block_v2(x, 96, alpha, expansion_factor, depth_multiplier, block_id=13)
@@ -56,55 +56,6 @@ def mobilenet2_block(img_input, alpha=1.0, expansion_factor=6, depth_multiplier=
     return x
 
 
-def LeakyReLU6(x):
-    return K.relu(x, alpha=0.01, max_value=6)
-
-
-def vnect_dwc_block1(input, alpha=1.0, expansion_factor=6, depth_multiplier=1):
-    # top branch
-    x = _conv_block(input, 512, alpha, (1, 1), block_id=19)
-    
-    x = _depthwise_conv_block_v2(x, 512, alpha, expansion_factor, depth_multiplier, block_id=20)
-
-    x = Conv2D(1024, (1, 1), use_bias=False, padding='same', name="MConv3_block1")(x)
-    x = BatchNormalization(axis=bn_axis, name='bn_MConv31')(x)
-
-    # bottom branch
-    x2 = Conv2D(1024, (1, 1), use_bias=False, padding='same', name="MConv4_block1")(input)
-    x2 = BatchNormalization(axis=bn_axis, name='bn_MConv41')(x2)
-
-
-    # add top and bottom branch
-    x = Add()([x, x2])
-    # LeakyReLU6 (following vnect leakyReLu and relu6 from mobnet)
-    x = Activation(LeakyReLU6)(x)
-
-
-    return x
-
-
-def vnect_dwc_block2(x, num_p, alpha=1.0, expansion_factor=6, depth_multiplier=1):
-
-    x = _conv_block(x, 256, alpha, (1, 1), block_id=21)
-    
-    x = _depthwise_conv_block_v2(x, 128, alpha, expansion_factor, depth_multiplier, block_id=22)
-
-    x = _conv_block(x, 256, alpha, (1, 1), block_id=23)
-
-    # top transposed convolution
-    x = Conv2DTranspose(128, (4, 4), use_bias=False, strides=(2, 2), padding="same", name="MConv4_block2")(x)
-    x = BatchNormalization(axis=bn_axis, name='bn_trconv42')(x)
-    x = Activation(relu6)(x)
-
-    # final conv portion.
-    x = _depthwise_conv_block_v2(x, 128, alpha, expansion_factor, depth_multiplier, block_id=24)
-
-    x = Conv2D(num_p, (1, 1), use_bias=False, padding='same', name="MConv6_block2")(x)
-    x = BatchNormalization(axis=bn_axis, name='bn_MConv62')(x) # XXX do we need bn at the final conv?
-    x = Activation('relu', name="block2_out")(x) # XXX not in the original vnect
-
-    return x
-
 def fb_conv(inputs, num_p, kernel=(1,1), block_id=1):
     channel_axis = 1 if K.image_data_format() == 'channels_first' else -1
     x = Conv2D(num_p, kernel, padding='same', use_bias=False, name='fb_conv%d' % block_id)(inputs)
@@ -113,12 +64,6 @@ def fb_conv(inputs, num_p, kernel=(1,1), block_id=1):
 
 
 def final_block(x, num_p):
-
-    # stage0 = fb_conv(x, num_p, kernel=(1,1), block_id=19)
-    # stage1 = fb_conv(stage0, num_p, kernel=(3,3), block_id=20)
-    # stage1 = add([stage0, stage1])
-    # stage2 = fb_conv(stage1, num_p, kernel=(3,3), block_id=21)
-    # stage2 = add([stage1, stage2])
 
     # XXX PPP maybe we dont need another conv block (after the ADD (of block 20)
     x = Conv2D(num_p, (1, 1), use_bias=True, padding='same', name="final_conv")(x)

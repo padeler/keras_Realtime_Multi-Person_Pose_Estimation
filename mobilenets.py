@@ -796,7 +796,7 @@ def _make_divisible(v, divisor=8, min_value=8):
     return new_v
 
 
-def _conv_block(inputs, filters, alpha, kernel=(3, 3), strides=(1, 1), block_id=1):
+def _conv_block(inputs, filters, alpha, kernel=(3, 3),dilation_rate=1, strides=(1, 1), block_id=1):
     """Adds an initial convolution layer (with batch normalization and relu6).
     # Arguments
         inputs: Input tensor of shape `(rows, cols, 3)`
@@ -844,7 +844,7 @@ def _conv_block(inputs, filters, alpha, kernel=(3, 3), strides=(1, 1), block_id=
     x = Conv2D(filters, kernel,
                padding='same',
                use_bias=False,
-               strides=strides,
+               strides=strides, dilation_rate=dilation_rate,
                name='conv%d' % block_id)(inputs)
     x = BatchNormalization(axis=channel_axis, name='conv%d_bn' % block_id)(x)
     return Activation(relu6, name='conv%d_relu' % block_id)(x)
@@ -916,7 +916,7 @@ def _conv_block(inputs, filters, alpha, kernel=(3, 3), strides=(1, 1), block_id=
 
 
 def _depthwise_conv_block_v2(inputs, pointwise_conv_filters, alpha, expansion_factor,
-                             depth_multiplier=1, strides=(1, 1), block_id=1):
+                             depth_multiplier=1, strides=(1, 1),dilation_rate=1,  block_id=1):
     """Adds a depthwise convolution block V2.
     A depthwise convolution V2 block consists of a depthwise conv,
     batch normalization, relu6, pointwise convolution,
@@ -972,7 +972,7 @@ def _depthwise_conv_block_v2(inputs, pointwise_conv_filters, alpha, expansion_fa
         x = Conv2D(depthwise_conv_filters, (1, 1),
                    padding='same',
                    use_bias=False,
-                   strides=(1, 1),
+                   strides=(1, 1),dilation_rate=dilation_rate,
                    name='conv_expand_%d' % block_id)(inputs)
         x = BatchNormalization(axis=channel_axis, name='conv_expand_%d_bn' % block_id)(x)
         x = Activation(relu6, name='conv_expand_%d_relu' % block_id)(x)
@@ -982,7 +982,7 @@ def _depthwise_conv_block_v2(inputs, pointwise_conv_filters, alpha, expansion_fa
     x = DepthwiseConv2D((3, 3),
                         padding='same',
                         depth_multiplier=depth_multiplier,
-                        strides=strides,
+                        strides=strides,dilation_rate=dilation_rate,
                         use_bias=False,
                         name='conv_dw_%d' % block_id)(x)
     x = BatchNormalization(axis=channel_axis, name='conv_dw_%d_bn' % block_id)(x)
@@ -991,7 +991,7 @@ def _depthwise_conv_block_v2(inputs, pointwise_conv_filters, alpha, expansion_fa
     x = Conv2D(pointwise_conv_filters, (1, 1),
                padding='same',
                use_bias=False,
-               strides=(1, 1),
+               strides=(1, 1),dilation_rate=dilation_rate,
                name='conv_pw_%d' % block_id)(x)
     x = BatchNormalization(axis=channel_axis, name='conv_pw_%d_bn' % block_id)(x)
 
