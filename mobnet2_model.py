@@ -57,18 +57,30 @@ def mobilenet2_block(img_input, alpha=1.0, expansion_factor=6, depth_multiplier=
     # x = _conv_block(x, penultimate_filters, alpha=1.0, kernel=(1, 1), block_id=18)
 
 
+    # non mobnet2 layer
+    x = Activation(relu6, name="mobnet_out")(x)
+
     return x
 
 
 
-def stage_conv(inputs, filters, kernel=(3, 3), conv_id=1, stage_id=1):
+def stage_conv(inputs, filters, kernel=(3, 3), conv_id=1, stage_id=1, use_bn=True):
     x = Conv2D(filters, kernel,
                padding='same',
-               use_bias=False,
+               use_bias=not use_bn,
                name='stage%d_conv%d' % (stage_id, conv_id))(inputs)
-    x = BatchNormalization(axis=bn_axis, name='stage%d_conv%d_bn' % (stage_id,conv_id))(x)
+    if use_bn:
+        x = BatchNormalization(axis=bn_axis, name='stage%d_conv%d_bn' % (stage_id,conv_id))(x)
+
     return x
 
+def pre_stage(inputs, num_p):
+    hm = Conv2D(num_p, kernel_size=1,
+               padding='same',
+               use_bias=True,
+               name='pre_stage_conv')(inputs)
+    # hm = BatchNormalization(axis=bn_axis, name='pre_stage_bn')(hm)
+    return hm
 
 def stageT(x, num_p, stage_id=1):
     
@@ -81,26 +93,12 @@ def stageT(x, num_p, stage_id=1):
     x = Activation(relu6, name='stage%d_conv%d_relu' % (stage_id, 3))(x)
     
     # PW conv to the number of joints
-    x = stage_conv(x, num_p, kernel=1, conv_id=4, stage_id=stage_id)
+    x = stage_conv(x, num_p, kernel=1, conv_id=4, stage_id=stage_id, use_bn=False)
     # x = Activation('softmax', name='stage%d_softmax'%(stage_id))(x) # TODO the softmax activation is not correct when you have multiple people in the scene.
 
     return x
 
-
-def final_block(x, num_p):
-
-    # XXX PPP maybe we dont need another conv block (after the ADD (of block 20)
-    x = Conv2D(num_p, (1, 1), use_bias=True, padding='same', name="final_conv")(x)
-    x = Activation('softmax', name='act_softmax')(x) 
-
-    # x = BatchNormalization(axis=bn_axis, name='bn_MConv62')(x) # XXX do we need bn at the final conv? (tunrs out it is good idea)
-    # x = Activation(relu6, name="hm_out")(x) # XXX not in the original vnect nor openpose
-
-    return x
-
-
 def get_training_model():
-
 
     img_input_shape = (None, None, 3)
     heat_input_shape = (None, None, np_branch2)
@@ -120,7 +118,13 @@ def get_training_model():
     # mobilenet up to block 11
     stage0_out = mobilenet2_block(img_normalized)
 
-    x = stage0_out
+    # pre-stage
+    hm = pre_stage(stage0_out, np_branch2)
+    pre_out = Multiply(name="ps")([hm,  heat_weight_input])
+    outputs.append(pre_out)
+    
+    x = Concatenate()([stage0_out, hm])
+
     for sn in range(stages):
         stageT_out = stageT(x, np_branch2, sn)
         tr_out = Multiply(name="s%d"%sn)([stageT_out, heat_weight_input])
@@ -144,7 +148,11 @@ def get_testing_model(img_input_shape = (None, None, 3)):
     # mobilenet up to block 11
     stage0_out = mobilenet2_block(img_normalized)
 
-    x = stage0_out
+    # pre-stage
+    hm = pre_stage(stage0_out, np_branch2)
+    
+    x = Concatenate()([stage0_out, hm])
+
     for sn in range(stages):
 
         stageT_out = stageT(x, np_branch2, sn)

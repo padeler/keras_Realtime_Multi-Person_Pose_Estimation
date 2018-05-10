@@ -70,6 +70,7 @@ def eucl_loss(x, y):
     return K.sum(K.square(x - y)) / batch_size / 2
 
 losses = {}
+losses["ps"] = eucl_loss
 for sn in range(stages):
     losses["s%d"%sn] = eucl_loss
 
