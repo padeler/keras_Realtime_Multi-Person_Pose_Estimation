@@ -39,7 +39,7 @@ else:
 
     lc = 0
     for layer in model.layers:
-        if layer.name=="stage1_conv1":
+        if layer.name=="mobnet_out":
             break # nothing to load after this layer
         try:
             mn_layer = mn.get_layer(layer.name)
@@ -53,7 +53,7 @@ else:
     print "Done loading weights for %d mobilenet2 conv layers" % lc
 
 # prepare generators
-stages = 3
+stages = 4
 
 train_client = DataGeneratorClient(port=5555, host="localhost", hwm=160, batch_size=batch_size, with_pafs=False, stages=stages)
 train_client.start()
