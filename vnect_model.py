@@ -155,6 +155,6 @@ def get_testing_model(img_input_shape = (None, None, 3)):
 
 
 if __name__ == "__main__":
-    model = get_testing_model((224,224,3))
+    model = get_testing_model((368,368,3))
     model.summary()
 

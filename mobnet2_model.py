@@ -82,7 +82,7 @@ def stageT(x, num_p, stage_id=1):
     
     # PW conv to the number of joints
     x = stage_conv(x, num_p, kernel=1, conv_id=4, stage_id=stage_id)
-    x = Activation('softmax', name='stage%d_softmax'%(stage_id))(x) 
+    # x = Activation('softmax', name='stage%d_softmax'%(stage_id))(x) # TODO the softmax activation is not correct when you have multiple people in the scene.
 
     return x
 
