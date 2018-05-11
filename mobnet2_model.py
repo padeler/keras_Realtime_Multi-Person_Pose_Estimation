@@ -3,23 +3,26 @@ from keras.models import Model
 from keras.layers.merge import Concatenate
 from keras.layers import Activation, Input, Lambda, BatchNormalization
 from keras.layers.convolutional import Conv2D, Conv2DTranspose
-from keras.layers import Add, Multiply, LeakyReLU
+from keras.layers import Add, Multiply
 from keras.layers.merge import add
 from keras.applications import mobilenet
 
 from keras.layers.pooling import MaxPooling2D
 import keras.backend as K
-
 from mobilenets import _depthwise_conv_block_v2, _conv_block, relu6, DepthwiseConv2D
 
 
-stages = 3
+stages = 4
 np_branch2 = 19 # heatmaps 18 parts + background
 
 if K.image_data_format() == 'channels_last':
     bn_axis = 3
 else:
     bn_axis = 1
+
+
+def LeakyReLU6(x):
+    return K.relu(x, alpha=0.01, max_value=6)
 
 
 def mobilenet2_block(img_input, alpha=1.0, expansion_factor=6, depth_multiplier=1):
@@ -58,7 +61,7 @@ def mobilenet2_block(img_input, alpha=1.0, expansion_factor=6, depth_multiplier=
 
 
     # non mobnet2 layer
-    x = Activation(relu6, name="mobnet_out")(x)
+    # x = Activation(LeakyReLU6, name="mobnet_out")(x)
 
     return x
 
@@ -74,27 +77,20 @@ def stage_conv(inputs, filters, kernel=(3, 3), conv_id=1, stage_id=1, use_bn=Tru
 
     return x
 
-def pre_stage(inputs, num_p):
-    hm = Conv2D(num_p, kernel_size=1,
-               padding='same',
-               use_bias=True,
-               name='pre_stage_conv')(inputs)
-    # hm = BatchNormalization(axis=bn_axis, name='pre_stage_bn')(hm)
-    return hm
-
-def stageT(x, num_p, stage_id=1):
+def stageT(x, num_p, stage_id=0, use_bn=True, slim=False):
     
-    for i in range(3):
-        x = stage_conv(x, 128, kernel=3, conv_id=i, stage_id=stage_id)
-        x = Activation(relu6, name='stage%d_conv%d_relu' % (stage_id, i))(x)
+    if not slim:
+        for i in range(3):
+            x = stage_conv(x, 128, kernel=3, conv_id=i, stage_id=stage_id)
+            x = Activation(relu6, name='stage%d_conv%d_relu' % (stage_id, i))(x)
 
-    # PW conv 
-    x = stage_conv(x, 128, kernel=1, conv_id=3, stage_id=stage_id)
-    x = Activation(relu6, name='stage%d_conv%d_relu' % (stage_id, 3))(x)
-    
+        # PW conv 
+        x = stage_conv(x, 128, kernel=1, conv_id=3, stage_id=stage_id)
+        x = Activation(relu6, name='stage%d_conv%d_relu' % (stage_id, 3))(x)
+        
     # PW conv to the number of joints
-    x = stage_conv(x, num_p, kernel=1, conv_id=4, stage_id=stage_id, use_bn=False)
-    # x = Activation('softmax', name='stage%d_softmax'%(stage_id))(x) # TODO the softmax activation is not correct when you have multiple people in the scene.
+    x = stage_conv(x, num_p, kernel=1, conv_id=4, stage_id=stage_id, use_bn=use_bn)
+    x = Activation(LeakyReLU6, name='stage%d_leaky_relu6'%(stage_id))(x) 
 
     return x
 
@@ -116,22 +112,23 @@ def get_training_model():
     img_normalized = Lambda(lambda x: x / 127.5 - 1.0)(img_input)
 
     # mobilenet up to block 11
-    stage0_out = mobilenet2_block(img_normalized)
+    mobnet_out = mobilenet2_block(img_normalized)
 
-    # pre-stage
-    hm = pre_stage(stage0_out, np_branch2)
-    pre_out = Multiply(name="ps")([hm,  heat_weight_input])
+    # stage0
+    hm = stageT(mobnet_out, np_branch2, stage_id=0, slim=True)
+
+    pre_out = Multiply(name="s0")([hm,  heat_weight_input])
     outputs.append(pre_out)
     
-    x = Concatenate()([stage0_out, hm])
+    x = Concatenate()([mobnet_out, hm])
 
-    for sn in range(stages):
+    for sn in range(1,stages):
         stageT_out = stageT(x, np_branch2, sn)
         tr_out = Multiply(name="s%d"%sn)([stageT_out, heat_weight_input])
         outputs.append(tr_out)
 
         if (sn < stages):
-            x = Concatenate()([stage0_out, stageT_out])
+            x = Concatenate()([mobnet_out, stageT_out])
 
     model = Model(inputs=inputs, outputs=outputs)
 
@@ -146,19 +143,18 @@ def get_testing_model(img_input_shape = (None, None, 3)):
     img_normalized = Lambda(lambda x: x / 127.5 - 1.0)(img_input)
 
     # mobilenet up to block 11
-    stage0_out = mobilenet2_block(img_normalized)
+    mobnet_out = mobilenet2_block(img_normalized)
 
     # pre-stage
-    hm = pre_stage(stage0_out, np_branch2)
-    
-    x = Concatenate()([stage0_out, hm])
+    hm = stageT(mobnet_out, np_branch2, stage_id=0, slim=True)
+    x = Concatenate()([mobnet_out, hm])
 
-    for sn in range(stages):
+    for sn in range(1, stages):
 
         stageT_out = stageT(x, np_branch2, sn)
 
         if (sn < stages):
-            x = Concatenate()([stage0_out, stageT_out])
+            x = Concatenate()([mobnet_out, stageT_out])
 
     model = Model(inputs=[img_input], outputs=[stageT_out])
 

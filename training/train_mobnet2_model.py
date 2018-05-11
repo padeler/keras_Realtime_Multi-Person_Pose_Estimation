@@ -13,7 +13,7 @@ import keras.backend as K
 from hm_model import acc_norm
 from mobnet2_model import get_training_model
 
-batch_size = 12
+batch_size = 16
 max_epochs  = 200000 # 600000
 
 WEIGHTS_BEST = "mobnet2_weights.h5"
@@ -70,7 +70,6 @@ def eucl_loss(x, y):
     return K.sum(K.square(x - y)) / batch_size / 2
 
 losses = {}
-losses["ps"] = eucl_loss
 for sn in range(stages):
     losses["s%d"%sn] = eucl_loss
 
