@@ -4,7 +4,7 @@ from keras.layers.merge import Concatenate
 from keras.layers import Activation, Input, Lambda, BatchNormalization
 from keras.layers.convolutional import Conv2D, Conv2DTranspose
 from keras.layers import Add, Multiply, LeakyReLU
-from keras.applications import mobilenet
+from keras.applications.mobilenet import _depthwise_conv_block
 
 from keras.layers.pooling import MaxPooling2D
 import keras.backend as K
@@ -29,7 +29,7 @@ def mobilenet2_block(img_input, alpha=1.0, expansion_factor=6, depth_multiplier=
     x = _depthwise_conv_block_v2(x, 32, alpha, expansion_factor, depth_multiplier, block_id=5)
     x = _depthwise_conv_block_v2(x, 32, alpha, expansion_factor, depth_multiplier, block_id=6)
 
-    x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=7)#, strides=(2, 2))
+    x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=7, strides=(2, 2))
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=8)
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=9)
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=10)
@@ -38,18 +38,18 @@ def mobilenet2_block(img_input, alpha=1.0, expansion_factor=6, depth_multiplier=
     x = _depthwise_conv_block_v2(x, 96, alpha, expansion_factor, depth_multiplier, block_id=12)
     x = _depthwise_conv_block_v2(x, 96, alpha, expansion_factor, depth_multiplier, block_id=13)
 
-    # x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, block_id=14)#, strides=(2, 2))
-    # x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, block_id=15)
-    # x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, block_id=16)
+    x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, block_id=14)#, strides=(2, 2))
+    x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, block_id=15)
+    x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, block_id=16)
 
-    # x = _depthwise_conv_block_v2(x, 320, alpha, expansion_factor, depth_multiplier, block_id=17)
+    x = _depthwise_conv_block_v2(x, 320, alpha, expansion_factor, depth_multiplier, block_id=17)
 
-    # if alpha <= 1.0:
-    #     penultimate_filters = 1280
-    # else:
-    #     penultimate_filters = int(1280 * alpha)
+    if alpha <= 1.0:
+        penultimate_filters = 1280
+    else:
+        penultimate_filters = int(1280 * alpha)
 
-    # x = _conv_block(x, penultimate_filters, alpha=1.0, kernel=(1, 1), block_id=18)
+    x = _conv_block(x, penultimate_filters, alpha=1.0, kernel=(1, 1), block_id=18)
 
 
     return x
@@ -59,11 +59,11 @@ def LeakyReLU6(x):
     return K.relu(x, alpha=0.01, max_value=6)
 
 
-def vnect_dwc_block1(input, alpha=1.0, expansion_factor=6, depth_multiplier=1):
+def vnect_dwc_block1(input, alpha=1.0, depth_multiplier=1):
     # top branch
     x = _conv_block(input, 512, alpha, (1, 1), block_id=19)
     
-    x = _depthwise_conv_block_v2(x, 512, alpha, expansion_factor, depth_multiplier, block_id=20)
+    x = _depthwise_conv_block(x, 512, alpha, depth_multiplier, block_id=20)
 
     x = Conv2D(1024, (1, 1), use_bias=False, padding='same', name="MConv3_block1")(x)
     x = BatchNormalization(axis=bn_axis, name='bn_MConv31')(x)
@@ -82,11 +82,11 @@ def vnect_dwc_block1(input, alpha=1.0, expansion_factor=6, depth_multiplier=1):
     return x
 
 
-def vnect_dwc_block2(x, num_p, alpha=1.0, expansion_factor=6, depth_multiplier=1):
+def vnect_dwc_block2(x, num_p, alpha=1.0, depth_multiplier=1):
 
     x = _conv_block(x, 256, alpha, (1, 1), block_id=21)
     
-    x = _depthwise_conv_block_v2(x, 128, alpha, expansion_factor, depth_multiplier, block_id=22)
+    x = _depthwise_conv_block(x, 128, alpha, depth_multiplier, block_id=22)
 
     x = _conv_block(x, 256, alpha, (1, 1), block_id=23)
 
@@ -96,32 +96,14 @@ def vnect_dwc_block2(x, num_p, alpha=1.0, expansion_factor=6, depth_multiplier=1
     x = Activation(relu6)(x)
 
     # final conv portion.
-    x = _depthwise_conv_block_v2(x, 128, alpha, expansion_factor, depth_multiplier, block_id=24)
+    x = _depthwise_conv_block(x, 128, alpha, depth_multiplier, block_id=24)
 
     x = Conv2D(num_p, (1, 1), use_bias=False, padding='same', name="MConv6_block2")(x)
     x = BatchNormalization(axis=bn_axis, name='bn_MConv62')(x) # XXX do we need bn at the final conv?
-    x = Activation('relu', name="block2_out")(x) # XXX not in the original vnect
+    # x = Activation('relu', name="block2_out")(x) # XXX not in the original vnect
 
     return x
 
-
-
-
-def final_block(x, num_p, alpha=1.0, expansion_factor=6, depth_multiplier=1):
-
-    # stage0 = _depthwise_conv_block_v2(x, num_p, alpha, expansion_factor, depth_multiplier, block_id=19)
-    # stage1 = _depthwise_conv_block_v2(stage0, num_p, alpha, expansion_factor, depth_multiplier, block_id=20)
-
-    # XXX PPP maybe we need another conv block (1x1 or 3x3 after the ADD (of block 20)
-
-    # x = Conv2D(128, (1, 1), use_bias=True, padding='same', name="penultimate_conv")(x)
-    x = Conv2D(num_p, (1, 1), use_bias=True, padding='same', name="final_conv")(x)
-    x = Activation(LeakyReLU6,name="act_leaky_relu6")(x)
-    # x = BatchNormalization(axis=bn_axis, name='bn_MConv62')(x) # XXX do we need bn at the final conv?
-    # x = Activation(relu6, name="hm_out")(stage1) # XXX not in the original vnect
-
-
-    return x
 
 
 def get_training_model():
@@ -145,10 +127,9 @@ def get_training_model():
 
     # mobilenet up to block 11
     stage0_out = mobilenet2_block(img_normalized)
-    block2_out = final_block(stage0_out, np_branch2)
 
-    # block1_out = vnect_dwc_block1(stage0_out) # up to the sum
-    # block2_out = vnect_dwc_block2(block1_out, np_branch2)
+    block1_out = vnect_dwc_block1(stage0_out) # up to the sum
+    block2_out = vnect_dwc_block2(block1_out, np_branch2)
 
     tr_out = Multiply(name="weight_block")([block2_out, heat_weight_input])
     outputs.append(tr_out)
@@ -168,10 +149,9 @@ def get_testing_model(img_input_shape = (None, None, 3)):
 
     # mobnet up to block 4f and a transposed convolution in the end to increase resolution
     stage0_out = mobilenet2_block(img_normalized)
-    block2_out = final_block(stage0_out, np_branch2)
 
-    # block1_out = vnect_dwc_block1(stage0_out) # up to the sum
-    # block2_out = vnect_dwc_block2(block1_out, np_branch2)
+    block1_out = vnect_dwc_block1(stage0_out) # up to the sum
+    block2_out = vnect_dwc_block2(block1_out, np_branch2)
 
     model = Model(inputs=[img_input], outputs=[block2_out])
 
