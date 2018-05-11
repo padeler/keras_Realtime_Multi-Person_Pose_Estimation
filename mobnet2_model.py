@@ -116,7 +116,7 @@ def final_block(x, num_p, alpha=1.0, expansion_factor=6, depth_multiplier=1):
 
     # x = Conv2D(128, (1, 1), use_bias=True, padding='same', name="penultimate_conv")(x)
     x = Conv2D(num_p, (1, 1), use_bias=True, padding='same', name="final_conv")(x)
-    x = Activation("softmax",name="act_softmax")(x)
+    x = Activation(LeakyReLU6,name="act_leaky_relu6")(x)
     # x = BatchNormalization(axis=bn_axis, name='bn_MConv62')(x) # XXX do we need bn at the final conv?
     # x = Activation(relu6, name="hm_out")(stage1) # XXX not in the original vnect
 
