@@ -29,7 +29,7 @@ def mobilenet2_block(img_input, alpha=1.0, expansion_factor=6, depth_multiplier=
     x = _depthwise_conv_block_v2(x, 32, alpha, expansion_factor, depth_multiplier, block_id=5)
     x = _depthwise_conv_block_v2(x, 32, alpha, expansion_factor, depth_multiplier, block_id=6)
 
-    x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=7, strides=(2, 2))
+    x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=7)#, strides=(2, 2))
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=8)
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=9)
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=10)
@@ -91,9 +91,9 @@ def vnect_dwc_block2(x, num_p, alpha=1.0, depth_multiplier=1):
     x = _conv_block(x, 256, alpha, (1, 1), block_id=23)
 
     # top transposed convolution
-    x = Conv2DTranspose(128, (4, 4), use_bias=False, strides=(2, 2), padding="same", name="MConv4_block2")(x)
-    x = BatchNormalization(axis=bn_axis, name='bn_trconv42')(x)
-    x = Activation(relu6)(x)
+    # x = Conv2DTranspose(128, (4, 4), use_bias=False, strides=(2, 2), padding="same", name="MConv4_block2")(x)
+    # x = BatchNormalization(axis=bn_axis, name='bn_trconv42')(x)
+    # x = Activation(relu6)(x)
 
     # final conv portion.
     x = _depthwise_conv_block(x, 128, alpha, depth_multiplier, block_id=24)
