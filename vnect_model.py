@@ -96,7 +96,7 @@ def vnect_block2(x, num_p):
 
     x = Conv2D(num_p, (1, 1), padding='same', name="MConv6_block2")(x)
     x = BatchNormalization(axis=bn_axis, name='bn_MConv62')(x) # XXX do we need bn at the final conv?
-    # x = Activation('relu', name="block2_out")(x) # XXX not in the original vnect
+    x = Activation('softmax', name="block2_out")(x) # XXX not in the original vnect
 
     return x
 
