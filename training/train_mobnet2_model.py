@@ -13,7 +13,7 @@ import keras.backend as K
 from hm_model import acc_norm
 from mobnet2_model import get_training_model
 
-batch_size = 16
+batch_size = 12
 max_epochs  = 200000 # 600000
 
 WEIGHTS_BEST = "mobnet2_weights.h5"
