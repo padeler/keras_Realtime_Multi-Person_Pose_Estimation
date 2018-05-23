@@ -29,7 +29,7 @@ def mobilenet2_block(img_input, alpha=1.0, expansion_factor=6, depth_multiplier=
     x = _depthwise_conv_block_v2(x, 32, alpha, expansion_factor, depth_multiplier, block_id=5)
     x = _depthwise_conv_block_v2(x, 32, alpha, expansion_factor, depth_multiplier, block_id=6)
 
-    x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=7)#, strides=(2, 2))
+    x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=7, strides=(2, 2))
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=8)
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=9)
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=10)
@@ -100,7 +100,7 @@ def vnect_dwc_block2(x, num_p, alpha=1.0, expansion_factor=6, depth_multiplier=1
 
     x = Conv2D(num_p, (1, 1), use_bias=False, padding='same', name="MConv6_block2")(x)
     x = BatchNormalization(axis=bn_axis, name='bn_MConv62')(x) # XXX do we need bn at the final conv?
-    x = Activation('relu', name="block2_out")(x) # XXX not in the original vnect
+    x = Activation('softmax', name="block2_out")(x) # XXX not in the original vnect
 
     return x
 
@@ -116,8 +116,8 @@ def final_block(x, num_p, alpha=1.0, expansion_factor=6, depth_multiplier=1):
 
     # x = Conv2D(128, (1, 1), use_bias=True, padding='same', name="penultimate_conv")(x)
     x = Conv2D(num_p, (1, 1), use_bias=True, padding='same', name="final_conv")(x)
-    x = Activation(LeakyReLU6,name="act_leaky_relu6")(x)
-    # x = BatchNormalization(axis=bn_axis, name='bn_MConv62')(x) # XXX do we need bn at the final conv?
+    # x = Activation(LeakyReLU6,name="act_leaky_relu6")(x)
+    x = BatchNormalization(axis=bn_axis, name='bn_MConv62')(x) # XXX do we need bn at the final conv?
     # x = Activation(relu6, name="hm_out")(stage1) # XXX not in the original vnect
 
 
@@ -145,10 +145,10 @@ def get_training_model():
 
     # mobilenet up to block 11
     stage0_out = mobilenet2_block(img_normalized)
-    block2_out = final_block(stage0_out, np_branch2)
+    # block2_out = final_block(stage0_out, np_branch2)
 
-    # block1_out = vnect_dwc_block1(stage0_out) # up to the sum
-    # block2_out = vnect_dwc_block2(block1_out, np_branch2)
+    block1_out = vnect_dwc_block1(stage0_out) # up to the sum
+    block2_out = vnect_dwc_block2(block1_out, np_branch2)
 
     tr_out = Multiply(name="weight_block")([block2_out, heat_weight_input])
     outputs.append(tr_out)
@@ -168,10 +168,10 @@ def get_testing_model(img_input_shape = (None, None, 3)):
 
     # mobnet up to block 4f and a transposed convolution in the end to increase resolution
     stage0_out = mobilenet2_block(img_normalized)
-    block2_out = final_block(stage0_out, np_branch2)
+    # block2_out = final_block(stage0_out, np_branch2)
 
-    # block1_out = vnect_dwc_block1(stage0_out) # up to the sum
-    # block2_out = vnect_dwc_block2(block1_out, np_branch2)
+    block1_out = vnect_dwc_block1(stage0_out) # up to the sum
+    block2_out = vnect_dwc_block2(block1_out, np_branch2)
 
     model = Model(inputs=[img_input], outputs=[block2_out])
 

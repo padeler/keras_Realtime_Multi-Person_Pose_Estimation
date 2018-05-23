@@ -30,6 +30,10 @@ if __name__ == '__main__':
     model = get_testing_model()
     model.load_weights(keras_weights_file)
 
+
+    print "Saving full model"
+    model.save("openpose_model.h5", include_optimizer=False)
+
     print('start loop...')
 
     # load config
