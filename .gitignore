@@ -18,3 +18,4 @@ weights.best.h5
 **/*.pyc
 training/*.h5
 training/*.csv
+.vscode

@@ -1,6 +1,7 @@
 import numpy as np
 import zmq
 from ast import literal_eval as make_tuple
+import cv2
 
 import six
 if six.PY3:
@@ -87,7 +88,12 @@ class DataGeneratorClient(object):
 
             # image
             dta_img = np.transpose(data_img, (1, 2, 0))
-            batches_x[sample_idx]=dta_img[np.newaxis, ...]
+
+            # XXX convert color images to gray for training a grayscale joint estimator
+            dta_img_gray = cv2.cvtColor(dta_img, cv2.COLOR_BGR2GRAY)[:,:,np.newaxis]
+            # ===========================
+            
+            batches_x[sample_idx]=dta_img_gray[np.newaxis, ...]
 
             # mask - the same for vec_weights, heat_weights
             vec_weights = np.repeat(mask_img[:,:,np.newaxis], self.vec_num, axis=2)

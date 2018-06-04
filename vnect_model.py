@@ -15,6 +15,16 @@ if K.image_data_format() == 'channels_last':
 else:
     bn_axis = 1
 
+
+def gray2bgr_block(img_input):
+    """
+    Pointwise convolution to change the single channel grayscale image to a 
+    three channel one that can be used by the pretrained resnet on bgr images
+    """
+    x = Conv2D(
+        3, (1, 1), padding='same', name='gray2bgr_conv')(img_input)
+    return x
+    
 def resnet50_block(img_input):
 
 
@@ -104,7 +114,7 @@ def get_training_model():
 
     np_branch2 = 19 # heatmaps 18 parts + background
 
-    img_input_shape = (None, None, 3)
+    img_input_shape = (None, None, 1)
     heat_input_shape = (None, None, np_branch2)
 
     inputs = []
@@ -119,6 +129,8 @@ def get_training_model():
     # For TF backend: resnet50 expects image input in range [-1.0,1.0]
     img_normalized = Lambda(lambda x: x / 127.5 - 1.0)(img_input)
 
+    
+    img_normalized = gray2bgr_block(img_normalized) 
     # RESNET50 up to block 4f and a transposed convolution in the end to increase resolution
     stage0_out = resnet50_block(img_normalized)
 
@@ -133,7 +145,7 @@ def get_training_model():
     return model
 
 
-def get_testing_model(img_input_shape = (None, None, 3)):
+def get_testing_model(img_input_shape = (None, None, 1)):
     np_branch2 = 19 # Heatmaps
 
     img_input = Input(shape=img_input_shape)
@@ -141,6 +153,7 @@ def get_testing_model(img_input_shape = (None, None, 3)):
     # For TF backend: resnet50 expects image input in range [-1.0,1.0]
     img_normalized = Lambda(lambda x: x / 127.5 - 1.0)(img_input)
 
+    img_normalized = gray2bgr_block(img_normalized) 
     # RESNET50 up to block 4f and a transposed convolution in the end to increase resolution
     stage0_out = resnet50_block(img_normalized)
 
@@ -150,3 +163,8 @@ def get_testing_model(img_input_shape = (None, None, 3)):
     model = Model(inputs=[img_input], outputs=[block2_out])
 
     return model
+
+
+if __name__ == "__main__":
+    model = get_testing_model(img_input_shape=(368,368,1))
+    model.summary()
