@@ -105,6 +105,9 @@ if __name__ == '__main__':
     full_model = model.get_testing_model()
     full_model.load_weights(keras_weights_file)
 
+    # print("Saving Model")
+    # full_model.save("mobnet2_vnect_sm_1.9k.h5", include_optimizer=False)
+
     # model = Model(inputs=full_model.input,
     #                                  outputs=full_model.get_layer("Mconv5_stage1_L2").output)
     # model = Model(inputs=full_model.input,
