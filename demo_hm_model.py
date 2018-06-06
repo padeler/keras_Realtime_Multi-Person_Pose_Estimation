@@ -26,6 +26,7 @@ def preprocess(oriImg, model_params):
     scale = float(model_params['boxsize']) / float(oriImg.shape[0])
 
     imageToTest = cv2.resize(oriImg, (0, 0), fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+    imageToTest = imageToTest[:,:,np.newaxis]
     imageToTest_padded, pad = util.padRightDownCorner(imageToTest, model_params['stride'],
                                                       model_params['padValue'])
 
@@ -91,7 +92,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # parser.add_argument('--model', type=str, default='training/resnet_trconv_hm_weights.h5', help='path to the weights file')
-    parser.add_argument('--model', type=str, default='training/vnect_weights.h5', help='path to the weights file')
+    # parser.add_argument('--model', type=str, default='training/vnect_weights.h5', help='path to the weights file')
+    parser.add_argument('--model', type=str, default='training/gray_vnect_weights.h5', help='path to the weights file')
     # parser.add_argument('--model', type=str, default='model/keras/model.h5', help='path to the weights file')
 
     args = parser.parse_args()
@@ -127,7 +129,10 @@ if __name__ == '__main__':
         if not ret:
             raise Exception("VideoCapture.read() returned False")
 
-        input_img, pad = preprocess(frame, model_params)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        
+        input_img, pad = preprocess(gray, model_params)
+               
 
         tic = time.time()
         output_blobs = model.predict(input_img)
