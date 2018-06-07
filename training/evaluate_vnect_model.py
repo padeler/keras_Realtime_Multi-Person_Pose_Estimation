@@ -18,15 +18,15 @@ import keras.backend as K
 
 from hm_model import acc_norm
 
-batch_size = 5
+batch_size = 100
 
-WEIGHTS_BEST = "gray_vnect_weights_2.6k.h5"
+WEIGHTS_BEST = "gray_vnect_weights_3.8k.h5"
 
 
 val_client = DataGeneratorClient(port=5556, host="localhost", hwm=160, batch_size=batch_size, with_pafs=False, stages=1)
 val_client.start()
 val_di = val_client.gen()
-val_samples = 2645
+val_samples = 2000
 
 
 import vnect_model as md
