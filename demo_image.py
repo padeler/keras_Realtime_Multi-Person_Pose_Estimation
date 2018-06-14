@@ -210,7 +210,7 @@ def skeletonize(heatmap_avg, paf_avg, oriImgShape, thre1, thre2):
                     subset = np.vstack([subset, row])
 
     # delete some rows of subset which has few parts occur
-    deleteIdx = [];
+    deleteIdx = []
     for i in range(len(subset)):
         if subset[i][-1] < 4 or subset[i][-2] / subset[i][-1] < 0.4:
             deleteIdx.append(i)

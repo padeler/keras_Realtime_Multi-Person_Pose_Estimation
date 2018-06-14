@@ -70,7 +70,7 @@ def vnect_block1(input):
     return x
 
 
-def vnect_block2(x, num_p):
+def vnect_block2(x, hm_len, paf_len):
 
     x = Conv2D(256, (1, 1), padding='same', name="MConv1_block2")(x)
     x = BatchNormalization(axis=bn_axis, name='bn_MConv12')(x)
@@ -94,27 +94,34 @@ def vnect_block2(x, num_p):
     x = BatchNormalization(axis=bn_axis, name='bn_MConv52')(x)
     x = Activation('relu')(x)
 
-    x = Conv2D(num_p, (1, 1), padding='same', name="MConv6_block2")(x)
-    x = BatchNormalization(axis=bn_axis, name='bn_MConv62')(x) # XXX do we need bn at the final conv?
-    x = Activation('softmax', name="block2_out")(x) # XXX not in the original vnect
+    hm = Conv2D(hm_len, (1, 1), padding='same', name="conv_hm")(x)
+    hm = BatchNormalization(axis=bn_axis, name='bn_hm')(hm) # XXX do we need bn at the final conv?
+    hm = Activation('softmax', name="sm_hm")(hm) # XXX not in the original vnect
 
-    return x
+    pafs = Conv2D(paf_len, (1, 1), padding='same', name="conv_paf")(x)
+    pafs = BatchNormalization(axis=bn_axis, name='bn_paf')(pafs) 
+
+    return hm, pafs
 
 def get_training_model():
 
-    np_branch2 = 19 # heatmaps 18 parts + background
+    hm_len = 19
+    paf_len = 38
 
     img_input_shape = (None, None, 3)
-    heat_input_shape = (None, None, np_branch2)
+    hm_input_shape = (None, None, hm_len)
+    paf_input_shape = (None, None, paf_len)
 
     inputs = []
     outputs = []
 
     img_input = Input(shape=img_input_shape)
-    heat_weight_input = Input(shape=heat_input_shape)
+    hm_weight_input = Input(shape=hm_input_shape)
+    paf_weight_input = Input(shape=paf_input_shape)
 
     inputs.append(img_input)
-    inputs.append(heat_weight_input)
+    inputs.append(paf_weight_input)
+    inputs.append(hm_weight_input)
 
     # For TF backend: resnet50 expects image input in range [-1.0,1.0]
     img_normalized = Lambda(lambda x: x / 127.5 - 1.0)(img_input)
@@ -123,18 +130,21 @@ def get_training_model():
     stage0_out = resnet50_block(img_normalized)
 
     block1_out = vnect_block1(stage0_out) # up to the sum
-    block2_out = vnect_block2(block1_out, np_branch2)
+    hm, pafs = vnect_block2(block1_out, hm_len, paf_len)
 
-    tr_out = Multiply(name="weight_block")([block2_out, heat_weight_input])
-    outputs.append(tr_out)
+    hm_out = Multiply(name="weight_block_hm")([hm, hm_weight_input])
+    paf_out = Multiply(name="weight_block_paf")([pafs, paf_weight_input])
+    
+    outputs.append(paf_out)
+    outputs.append(hm_out)
 
     model = Model(inputs=inputs, outputs=outputs)
-
     return model
 
 
 def get_testing_model(img_input_shape = (None, None, 3)):
-    np_branch2 = 19 # Heatmaps
+    hm_len = 19
+    paf_len = 38
 
     img_input = Input(shape=img_input_shape)
 
@@ -145,8 +155,14 @@ def get_testing_model(img_input_shape = (None, None, 3)):
     stage0_out = resnet50_block(img_normalized)
 
     block1_out = vnect_block1(stage0_out) # up to the sum
-    block2_out = vnect_block2(block1_out, np_branch2)
+    hm, pafs = vnect_block2(block1_out, hm_len, paf_len)
 
-    model = Model(inputs=[img_input], outputs=[block2_out])
+    model = Model(inputs=[img_input], outputs=[pafs, hm])
 
     return model
+
+
+
+if __name__ == "__main__":
+    model = get_training_model()#(368,368,3))
+    model.summary()
