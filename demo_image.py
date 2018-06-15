@@ -1,3 +1,4 @@
+from __future__ import print_function
 import argparse
 import cv2
 import math
@@ -41,11 +42,14 @@ def predict(input_image, params, model_params, model):
     else:
         oriImg = input_image
 
-    multiplier = [x * model_params['boxsize'] / oriImg.shape[0] for x in params['scale_search']]
+
+    multiplier = [x * model_params['boxsize'] / float(oriImg.shape[0]) for x in params['scale_search']]
+    
 
     heatmap_avg = np.zeros((oriImg.shape[0], oriImg.shape[1], 19))
     paf_avg = np.zeros((oriImg.shape[0], oriImg.shape[1], 38))
-
+    
+    # print("Original Image ",oriImg.shape)
     for m in range(len(multiplier)):
         scale = multiplier[m]
 
@@ -53,23 +57,27 @@ def predict(input_image, params, model_params, model):
         imageToTest_padded, pad = util.padRightDownCorner(imageToTest, model_params['stride'],
                                                           model_params['padValue'])
 
+        # print(scale," ==> ",imageToTest.shape," padded ",imageToTest_padded.shape)
+        # cv2.imshow("imageToTest",imageToTest)
+        # cv2.imshow("imageToTest Padded",imageToTest_padded)
+        # cv2.waitKey(0)
+
         input_img = np.transpose(np.float32(imageToTest_padded[:,:,:,np.newaxis]), (3,0,1,2)) # required shape (1, width, height, channels)
 
         output_blobs = model.predict(input_img)
 
         # extract outputs, resize, and remove padding
         heatmap = np.squeeze(output_blobs[1])  # output 1 is heatmaps
-        heatmap = cv2.resize(heatmap, (0, 0), fx=model_params['stride'], fy=model_params['stride'],
-                             interpolation=cv2.INTER_CUBIC)
-        heatmap = heatmap[:imageToTest_padded.shape[0] - pad[2], :imageToTest_padded.shape[1] - pad[3],
-                  :]
+        heatmap = cv2.resize(heatmap, (0, 0), fx=model_params['stride'], fy=model_params['stride'], interpolation=cv2.INTER_CUBIC)
+        heatmap = heatmap[:imageToTest_padded.shape[0] - pad[2], :imageToTest_padded.shape[1] - pad[3], :]
         heatmap = cv2.resize(heatmap, (oriImg.shape[1], oriImg.shape[0]), interpolation=cv2.INTER_CUBIC)
 
         paf = np.squeeze(output_blobs[0])  # output 0 is PAFs
-        paf = cv2.resize(paf, (0, 0), fx=model_params['stride'], fy=model_params['stride'],
-                         interpolation=cv2.INTER_CUBIC)
+        paf = cv2.resize(paf, (0, 0), fx=model_params['stride'], fy=model_params['stride'], interpolation=cv2.INTER_CUBIC)
         paf = paf[:imageToTest_padded.shape[0] - pad[2], :imageToTest_padded.shape[1] - pad[3], :]
         paf = cv2.resize(paf, (oriImg.shape[1], oriImg.shape[0]), interpolation=cv2.INTER_CUBIC)
+        
+        # print("HM min/max", heatmap.min(), heatmap.max())
 
         heatmap_avg = heatmap_avg + heatmap / len(multiplier)
         paf_avg = paf_avg + paf / len(multiplier)
@@ -77,14 +85,14 @@ def predict(input_image, params, model_params, model):
     return heatmap_avg, paf_avg, oriImg
 
 
-def skeletonize(heatmap_avg, paf_avg, oriImgShape, thre1, thre2):
+def skeletonize(heatmap_avg, paf_avg, oriImgShape, thre1, thre2, sigma=3):
 
     all_peaks = []
     peak_counter = 0
 
     for part in range(18):
         map_ori = heatmap_avg[:, :, part]
-        map = gaussian_filter(map_ori, sigma=3)
+        map = gaussian_filter(map_ori, sigma=sigma)
 
         map_left = np.zeros(map.shape)
         map_left[1:, :] = map[:-1, :]

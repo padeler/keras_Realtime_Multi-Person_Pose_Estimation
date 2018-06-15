@@ -12,10 +12,10 @@ from demo_image import predict, skeletonize, visualize, colors
 
 
 
-coco_part_str = [u'nose', u'left_eye', u'right_eye', u'left_ear', u'right_ear', u'left_shoulder', u'right_shoulder', u'left_elbow', u'right_elbow', 
-                u'left_wrist', u'right_wrist', u'left_hip', u'right_hip', u'left_knee', u'right_knee', u'left_ankle', u'right_ankle']
+coco_part_str = [u'nose', u'leye', u'reye', u'lear', u'rear', u'lshou', u'rshou', u'lelbow', u'relbow', 
+                u'lwrist', u'rwrist', u'lhip', u'rhip', u'lknee', u'rknee', u'lankle', u'rankle']
 
-TO_COCO = [0,14,15,16,17,5,2,6,3,7,4,11,8,12,9,13,10]
+TO_COCO = [0, 15,14,17,16, 5,2,6,3,7,4, 11,8,12,9,13,10]
 
 def ToCOCOResultList(image_id, skeletons, peaks):
     res = []
@@ -57,9 +57,10 @@ def visualize_results_list(canvas,res, part_str=None):
         for i in range(17):
             p = i*3
             pos = tuple(joints[p:p+2])
-            cv2.circle(canvas, pos, 4, color, thickness=-1)
-            if part_str is not None:
-                cv2.putText(canvas, part_str[i], pos, 0, 0.5, color)
+            if joints[p+2]==2:
+                cv2.circle(canvas, pos, 4, color, thickness=-1)
+                if part_str is not None:
+                    cv2.putText(canvas, part_str[i], pos, 0, 0.5, colors[i])
 
     
     return canvas
@@ -67,20 +68,25 @@ def visualize_results_list(canvas,res, part_str=None):
 if __name__ == '__main__':
 
     dataset_path = "/media/storage/home/padeler/work/heatmaps/keras_Realtime_Multi-Person_Pose_Estimation/dataset/val2017"
-    out_file = "result_keypoints.json"
     max_count = 100
     thre1 = 0.01
     thre2 = 0.005
+    sigma = 3
+
     params, model_params = config_reader()
 
-    keras_weights_file = "training/vnect_pafs_weights.h5"
-    # keras_weights_file = "model/keras/model.h5"
     from vnect_model import get_testing_model
     # from model import get_testing_model
+    keras_weights_file = "training/vnect_pafs_weights.h5"
+    # keras_weights_file = "model/keras/model.h5"
+
+    # out_file = "openpose_result_val2017.json"
+    out_file = "result_keypoints.json"
     
     val_set = glob.glob(dataset_path+os.sep+"*.jpg")
     val_set.sort()
     results = []
+
     print("Validation set size ",len(val_set))
 
 
@@ -91,6 +97,13 @@ if __name__ == '__main__':
     print('start loop...')
     # load config
 
+    delay = {
+        True: 0,
+        False: 5,
+    }
+    paused = True
+
+
     k = 0
     count=0
     skel_count=0
@@ -99,22 +112,23 @@ if __name__ == '__main__':
 
     for fname in val_set:
         image_id = int(os.path.os.path.basename(fname)[:-4])
-        print("[%d/%d] Processing image id %d" % (count,max_count,image_id))
 
         frame = cv2.imread(fname)
 
         # generate image with body parts
         hm, pafs, img = predict(frame, params, model_params, model)
+
+        # print("Source Image shape",frame.shape,"HM shape ", hm.shape, " PAFs shape", pafs.shape)
         
         # subset holds the skeletons, candidate holds the peaks
-        all_peaks, subset, candidate = skeletonize(hm, pafs, img.shape, thre1, thre2)
+        all_peaks, subset, candidate = skeletonize(hm, pafs, img.shape, thre1, thre2, sigma=sigma)
 
         # viz = visualize(img.copy(), all_peaks, subset, candidate)
         # cv2.imshow("VIZ", viz)
         # showPAFs(pafs)
         
         res = ToCOCOResultList(image_id, subset, candidate)
-        canvas = visualize_results_list(img, res)
+        canvas = visualize_results_list(img, res, coco_part_str)
 
         cv2.imshow("Canvas", canvas)
 
@@ -122,20 +136,24 @@ if __name__ == '__main__':
             skel_count += len(res)
             images_with_skel += 1
         
+        print("[%d/%d] Processed image id %d. People found %d" % (count,max_count,image_id, len(res)))
+
         all_results += res
             
         count+=1
 
-        k = cv2.waitKey(5)
+        k = cv2.waitKey(delay[paused])
         if k&0xFF==ord('q') or count==max_count:
             break
+        if k&0xFF==ord('p'):
+            paused = not paused
 
     cv2.destroyAllWindows()
 
 
     print("Processed %d images. Total skeletons %d, images with at least one skeleton %d"%(count, skel_count, images_with_skel))
 
-    print("Saving keypoint results to ",out_file)
+    print("Saving keypoint thre1,2,sigma = {%.3f,%.4f, %d} results to "%(thre1,thre2,sigma), out_file)
     with open(out_file,"w") as f:
         json.dump(all_results, f)
     
