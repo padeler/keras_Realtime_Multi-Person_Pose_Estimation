@@ -60,12 +60,12 @@ stages = 1
 train_client = DataGeneratorClient(port=5555, host="localhost", hwm=160, batch_size=batch_size, with_pafs=True, stages=stages)
 train_client.start()
 train_di = train_client.gen()
-train_samples = 2000  # 52597 # All train samples in the COCO dataset
+train_samples = 3000  # 52597 # All train samples in the COCO dataset
 
 val_client = DataGeneratorClient(port=5556, host="localhost", hwm=160, batch_size=batch_size, with_pafs=True, stages=stages)
 val_client.start()
 val_di = val_client.gen()
-val_samples = 200  # 2645 # All validation samples in the COCO dataset
+val_samples = 1000  # 2645 # All validation samples in the COCO dataset
 
 
 # euclidean loss as implemented in caffe https://github.com/BVLC/caffe/blob/master/src/caffe/layers/euclidean_loss_layer.cpp

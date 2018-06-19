@@ -42,7 +42,7 @@ def ToCOCOResultList(image_id, persons):
 if __name__ == '__main__':
 
     dataset_path = "/media/storage/home/padeler/work/heatmaps/keras_Realtime_Multi-Person_Pose_Estimation/dataset/val2017"
-    max_count = 5000
+    max_count = 1000
 
     download_heatmaps = False
     with_face = with_hands = False
@@ -50,7 +50,7 @@ if __name__ == '__main__':
     #                  download_heatmaps, OP.OpenPose.ScaleMode.ZeroToOne, with_face, with_hands)
     op = OP.OpenPose((-1, 368), (240, 240), (-1, -1), "COCO", OPENPOSE_ROOT + os.sep + "models" + os.sep, 0, download_heatmaps)
 
-    out_file = "pyopenpose_result_val2017.json"
+    out_file = "pyopenpose_1k_val2017.json"
     
     val_set = glob.glob(dataset_path+os.sep+"*.jpg")
     val_set.sort()

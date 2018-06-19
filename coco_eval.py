@@ -68,7 +68,7 @@ def visualize_results_list(canvas,res, part_str=None):
 if __name__ == '__main__':
 
     dataset_path = "/media/storage/home/padeler/work/heatmaps/keras_Realtime_Multi-Person_Pose_Estimation/dataset/val2017"
-    max_count = 100
+    max_count = 1000
     thre1 = 0.01
     thre2 = 0.005
     sigma = 3
@@ -80,8 +80,8 @@ if __name__ == '__main__':
     keras_weights_file = "training/vnect_pafs_weights.h5"
     # keras_weights_file = "model/keras/model.h5"
 
-    # out_file = "openpose_result_val2017.json"
-    out_file = "result_keypoints.json"
+    # out_file = "openpose_1k_r2_val2017.json"
+    out_file = "vnect_pafs_1k_8.1k.json"
     
     val_set = glob.glob(dataset_path+os.sep+"*.jpg")
     val_set.sort()
